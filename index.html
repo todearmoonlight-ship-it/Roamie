@@ -151,7 +151,7 @@
     .keep-text-xl { font-size:20px !important; line-height:1.75rem !important; }
     .keep-text-2xl { font-size:24px !important; line-height:2rem !important; }
     .keep-text-3xl { font-size:30px !important; line-height:2.25rem !important; }
-    .expense-filter-btn.active { background:rgba(255,255,255,.45) !important; box-shadow: inset 0 0 0 1px rgba(255,255,255,.65); }
+    .expense-filter-btn.active, .expense-split-btn.active { background:rgba(255,255,255,.45) !important; box-shadow: inset 0 0 0 1px rgba(255,255,255,.65); }
     #budget-percent { font-size:12px !important; }
     #budget-spent, #budget-left { font-size:10px !important; }
     #total-jpy, #rate-display { font-size:12px !important; }
@@ -219,6 +219,14 @@
     .plan-progress-fill{height:100%;background:#38A1DB;border-radius:999px;transition:width .25s ease;}
     .expense-summary-grid{display:grid;grid-template-columns:1.08fr .92fr;gap:14px;align-items:start;}
     @media (max-width:360px){.expense-summary-grid{grid-template-columns:1fr;}}
+
+    /* v15.4.1：超出 16 日天氣預報範圍時，只顯示單一提示 */
+    #schedule-weather-card.forecast-out-of-range{padding:16px 18px;}
+    #schedule-weather-card.forecast-out-of-range > div{display:block;min-height:42px;}
+    #schedule-weather-card.forecast-out-of-range > div > div:first-child{display:none;}
+    #schedule-weather-card.forecast-out-of-range > div > div:last-child{text-align:center !important;width:100%;}
+    #schedule-weather-card.forecast-out-of-range #schedule-weather-temp{display:none;}
+    #schedule-weather-card.forecast-out-of-range #schedule-weather-detail{font-size:14px !important;line-height:1.5rem !important;color:#9CA3AF !important;text-align:center;white-space:normal;margin:0;}
 
 
   
@@ -324,6 +332,15 @@
       background:#F7F4EB;
     }
 
+    .mobile-form-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;}
+    .mobile-form-grid > *{min-width:0;}
+    @media (min-width:390px){.mobile-form-grid.two{grid-template-columns:repeat(2,minmax(0,1fr));}}
+    .flight-route-grid{display:grid;grid-template-columns:minmax(70px,1fr) minmax(84px,1.15fr) minmax(70px,1fr);gap:8px;align-items:center;}
+    .flight-airport-code{font-size:20px;line-height:1.2;font-weight:700;color:#4A3E3D;white-space:nowrap;}
+    .flight-airport-name{font-size:11px;line-height:1.35;color:#9CA3AF;min-height:30px;display:flex;align-items:center;justify-content:center;text-align:center;word-break:break-word;}
+    .flight-time{font-size:14px;line-height:1.25;font-weight:700;color:#E05244;margin-top:2px;}
+    @media (max-width:360px){.flight-route-grid{grid-template-columns:minmax(64px,1fr) minmax(70px,.9fr) minmax(64px,1fr);gap:5px}.flight-airport-code{font-size:18px}.flight-airport-name{font-size:10px}}
+
   </style>
 </head>
 <body class="pb-24 max-w-md mx-auto relative min-h-screen border-x border-sand/60 shadow-2xl">
@@ -352,10 +369,11 @@
   <!-- ================= 2. 頂部 Header ================= -->
   <header id="app-header" class="p-4 sticky top-0 z-30 bg-[#FDFBF7]/90 backdrop-blur-md border-b border-sand">
     <div class="flex justify-between items-center">
-      <div class="flex items-center gap-2">
-        <span id="trip-emoji" class="text-2xl">🍁</span>
-        <h1 id="trip-header-title" class="text-xl font-bold text-wood tracking-wide">東京手帳 2026</h1>
-      </div>
+      <button type="button" onclick="openHeaderTripMenu()" class="flex items-center gap-2 min-w-0 text-left btn-press" title="切換旅程或回到封面" aria-label="切換旅程或回到封面">
+        <span id="trip-emoji" class="text-2xl shrink-0">🍁</span>
+        <h1 id="trip-header-title" class="text-xl font-bold text-wood tracking-wide truncate">東京手帳 2026</h1>
+        <i class="fa-solid fa-chevron-down text-[9px] text-gray-400 shrink-0"></i>
+      </button>
       <div class="flex items-center gap-2">
         <a id="header-manual-icon" href="https://drive.google.com/file/d/1aHA5tdPdgZ_VkoHTnogRh7v6ZNLmvVFC/view?usp=drive_link" target="_blank" rel="noopener" class="header-icon-btn btn-press text-amber-500" title="旅遊手冊 PDF" aria-label="旅遊手冊 PDF"><i class="fa-solid fa-book-open"></i></a>
         <button id="header-map-icon" type="button" onclick="openTripMapModal()" class="header-icon-btn btn-press text-skyBlue" title="旅遊景點地圖" aria-label="旅遊景點地圖"><i class="fa-solid fa-earth-asia"></i></button>
@@ -519,12 +537,12 @@
         <div class="expense-summary-grid pr-8">
           <div class="min-w-0">
             <div id="expense-total-label" class="text-xs opacity-80">總累計支出</div>
-            <div class="text-2xl keep-text-2xl font-bold tracking-tight mt-2">NT$ <span id="total-twd">0</span></div>
-            <div class="text-xs opacity-90 mt-2">日幣總額: ¥<span id="total-jpy">0</span></div>
+            <div class="text-2xl keep-text-2xl font-bold tracking-tight mt-2"><span id="base-currency-label">NTD</span> <span id="total-twd">0</span></div>
+            <div class="text-xs opacity-90 mt-2"><span id="foreign-currency-label">JPY</span> 總額: <span id="total-jpy">0</span></div>
           </div>
           <div class="text-right min-w-0">
             <div id="expense-budget-label" class="text-xs opacity-80">旅遊總預算</div>
-            <div class="text-2xl keep-text-2xl font-bold mt-2">NT$ <span id="budget-total">80,000</span></div>
+            <div class="text-2xl keep-text-2xl font-bold mt-2"><span id="budget-currency-label">NTD</span> <span id="budget-total">80,000</span></div>
             <div class="text-xs opacity-90 mt-2">已使用 <span id="budget-percent">0</span>%</div>
           </div>
         </div>
@@ -532,8 +550,8 @@
         <div class="space-y-2">
           <div class="budget-track"><div id="budget-fill" class="budget-fill" style="width:0%"></div></div>
           <div class="grid grid-cols-2 gap-2 text-[10px] opacity-90">
-            <span>已支出 NT$ <span id="budget-spent">0</span></span>
-            <span class="text-right">剩餘 NT$ <span id="budget-left">80,000</span></span>
+            <span>已支出 <span id="budget-spent-currency">NTD</span> <span id="budget-spent">0</span></span>
+            <span class="text-right">剩餘 <span id="budget-left-currency">NTD</span> <span id="budget-left">80,000</span></span>
           </div>
         </div>
 
@@ -560,8 +578,11 @@
           <button onclick="filterExpenseCategory('其他')" data-expense-cat="其他" title="其他" class="expense-filter-btn px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/40 btn-press">
             <i class="fa-solid fa-coins"></i>
           </button>
+          <button id="expense-split-summary-btn" onclick="showExpenseSplitSummary()" title="拆帳" aria-label="拆帳" class="expense-split-btn px-2.5 py-1 rounded-lg bg-white/20 hover:bg-white/40 btn-press">
+            <i class="fa-solid fa-people-arrows-left-right"></i>
+          </button>
         </div>
-        <div class="text-[10px] opacity-75 text-right -mt-1">預設匯率 <span id="rate-display">0.22</span></div>
+        <div class="text-[10px] opacity-75 text-right -mt-1"><span id="rate-caption">匯率 1 JPY = 0.22 NTD</span></div>
       </div>
 
       <!-- OCR 文字掃描記帳 -->
@@ -688,9 +709,9 @@
           <div class="flex items-center gap-1.5 font-bold text-wood text-sm">
             <i class="fa-solid fa-coins text-amber-500"></i> 匯率換算
           </div>
-          <div class="text-[10px] text-gray-400">JPY 日幣</div>
+          <div class="text-[10px] text-gray-400" id="tool-foreign-label">JPY</div>
           <input type="number" id="tool-jpy-input" value="10000" oninput="calcToolExchange()" class="w-full p-2 bg-paper rounded-xl border border-sand font-bold text-xs focus:outline-none">
-          <div class="text-xs font-bold text-skyBlue" id="tool-ntd-result">約 NT$2,200</div>
+          <div class="text-xs font-bold text-skyBlue" id="tool-ntd-result">約 NTD 2,200</div>
         </div>
 
         <div class="bg-card p-4 rounded-3xl border border-sand shadow-soft space-y-2">
@@ -698,7 +719,7 @@
             <i class="fa-solid fa-users text-skyBlue"></i> AA 分帳
           </div>
           <div>
-            <div class="text-[9px] text-gray-400">金額 JPY</div>
+            <div class="text-[9px] text-gray-400" id="aa-currency-label">金額 JPY</div>
             <input type="number" id="aa-amount" value="10000" class="w-full p-1.5 bg-paper rounded-xl border border-sand font-bold text-xs focus:outline-none">
           </div>
           <div>
@@ -1009,13 +1030,13 @@
     // ===== V15.1 通用旅程：保留原版 UI =====
     const V15_CONFIG_KEY='tripbook-v15-config';
     const TRIP_MANAGER_KEY='tripbook-v15-trip-manager';
-    const TRIP_DATA_KEYS=['tokyo-days-v2','tokyo-expenses-v2','tokyo-rate-v2','tokyo-budget-v2','tokyo-shop-v2','tokyo-journals-v2','tokyo-plan-v2',V15_CONFIG_KEY,'tripbook-v15-coupons'];
+    const TRIP_DATA_KEYS=['tokyo-days-v2','tokyo-expenses-v2','tokyo-expense-split-members-v1','tokyo-rate-v2','tokyo-budget-v2','tokyo-shop-v2','tokyo-journals-v2','tokyo-plan-v2','tripbook-v15-bookings',V15_CONFIG_KEY,'tripbook-v15-coupons'];
     const defaultTripConfig={
       title:'東京自由行 2026',headerTitle:'東京手帳 2026',emoji:'🍁',country:'日本',city:'東京',
       startDate:'2026-10-25',endDate:'2026-11-01',cover:'./cover.jpg',
       showManual:true,manualUrl:'https://drive.google.com/file/d/1aHA5tdPdgZ_VkoHTnogRh7v6ZNLmvVFC/view?usp=drive_link',
       showMap:true,mapUrl:'https://www.google.com/maps/d/viewer?mid=18IC04UGBo0p-LLcvXxef7GwkgqtFO1Y&usp=sharing',
-      showCoupons:true,autoImages:true
+      showCoupons:true,autoImages:true,baseCurrency:'NTD',foreignCurrency:'JPY',exchangeRate:0.22
     };
     let tripConfig=(()=>{try{return {...defaultTripConfig,...JSON.parse(localStorage.getItem(V15_CONFIG_KEY)||'{}')}}catch(e){return {...defaultTripConfig}}})();
 
@@ -1027,9 +1048,20 @@
       return {activeId:'trip-tokyo-2026',trips:[{id:'trip-tokyo-2026',title:'東京自由行 2026',city:'東京',country:'日本',startDate:'2026-10-25',endDate:'2026-11-01',cover:'./cover.jpg',useTokyoSeed:true,snapshot:null}]};
     }
     let tripManagerState=loadTripManagerState();
+    let tripTransitioning=false;
     function saveTripManagerState(){localStorage.setItem(TRIP_MANAGER_KEY,JSON.stringify(tripManagerState));}
     function activeTripMeta(){return tripManagerState.trips.find(x=>x.id===tripManagerState.activeId)||tripManagerState.trips[0]}
     function shouldUseTokyoSeed(){const t=activeTripMeta();return !t||t.useTokyoSeed!==false;}
+    function showTripSwitchOverlay(title='正在切換旅程…'){
+      let el=document.getElementById('trip-switch-overlay');
+      if(!el){
+        el=document.createElement('div');el.id='trip-switch-overlay';
+        el.className='fixed inset-0 z-[120] bg-[#FDFBF7]/95 backdrop-blur-md flex items-center justify-center p-6';
+        el.innerHTML='<div class="bg-card border border-sand rounded-3xl shadow-2xl px-7 py-6 text-center space-y-3"><i class="fa-solid fa-plane-departure text-skyBlue text-2xl animate-pulse"></i><div id="trip-switch-text" class="font-bold text-wood text-sm"></div><div class="text-[10px] text-gray-400">正在安全保存並載入此旅程資料</div></div>';
+        document.body.appendChild(el);
+      }
+      const t=el.querySelector('#trip-switch-text');if(t)t.textContent=title;el.classList.remove('hidden');
+    }
 
     function captureCurrentTripSnapshot(){
       const o={};
@@ -1038,10 +1070,11 @@
       return o;
     }
     function persistActiveTripSnapshot(){
+      if(tripTransitioning)return;
       const t=activeTripMeta();if(!t)return;
       t.snapshot=captureCurrentTripSnapshot();
       t.title=tripConfig.title||t.title;t.city=tripConfig.city||t.city;t.country=tripConfig.country||t.country;
-      t.startDate=tripConfig.startDate||t.startDate;t.endDate=tripConfig.endDate||t.endDate;t.cover=tripConfig.cover||t.cover;
+      t.startDate=tripConfig.startDate||t.startDate;t.endDate=tripConfig.endDate||t.endDate;t.cover=tripConfig.cover||t.cover;t.baseCurrency=baseCurrency?.()||tripConfig.baseCurrency||t.baseCurrency;t.foreignCurrency=foreignCurrency?.()||tripConfig.foreignCurrency||t.foreignCurrency;t.exchangeRate=currentExchangeRate||tripConfig.exchangeRate||t.exchangeRate;
       saveTripManagerState();
     }
     function clearTripLocalData(){
@@ -1049,8 +1082,15 @@
       Object.keys(localStorage).filter(k=>k.startsWith('note-')).forEach(k=>localStorage.removeItem(k));
     }
     function restoreTripSnapshot(t){
-      clearTripLocalData();
-      Object.entries(t?.snapshot||{}).forEach(([k,v])=>localStorage.setItem(k,v));
+      const safety=captureCurrentTripSnapshot();
+      try{
+        clearTripLocalData();
+        Object.entries(t?.snapshot||{}).forEach(([k,v])=>localStorage.setItem(k,v));
+        return true;
+      }catch(e){
+        try{clearTripLocalData();Object.entries(safety).forEach(([k,v])=>localStorage.setItem(k,v));}catch(_){/* 保留原錯誤 */}
+        throw e;
+      }
     }
     function tripDates(start,end){
       const out=[];if(!start||!end)return out;
@@ -1065,11 +1105,13 @@
       return {
         'tokyo-days-v2':JSON.stringify(tripDates(cfg.startDate,cfg.endDate)),
         'tokyo-expenses-v2':'[]',
-        'tokyo-rate-v2':'0.22',
+        'tokyo-expense-split-members-v1':'[]',
+        'tokyo-rate-v2':String(Number(cfg.exchangeRate)||0.22),
         'tokyo-budget-v2':'80000',
         'tokyo-shop-v2':JSON.stringify(blankShopData()),
         'tokyo-journals-v2':'[]',
         'tokyo-plan-v2':JSON.stringify(blankPlanData()),
+        'tripbook-v15-bookings':'[]',
         [V15_CONFIG_KEY]:JSON.stringify(cfg),
         'tripbook-v15-coupons':'[]'
       };
@@ -1098,6 +1140,23 @@
     }
 
     function startApp() { document.getElementById('splash-screen').classList.add('hide'); }
+    function returnToSplash(){
+      try{persistActiveTripSnapshot()}catch(e){}
+      closeGlobalModal();
+      const splash=document.getElementById('splash-screen');if(splash){splash.classList.remove('hide');window.scrollTo({top:0,behavior:'smooth'});}
+    }
+    function openHeaderTripMenu(){
+      try{persistActiveTripSnapshot()}catch(e){}
+      const title=document.getElementById('modal-title'),body=document.getElementById('modal-form-body');
+      title.innerHTML='<span><i class="fa-solid fa-route text-skyBlue mr-2"></i>旅程切換</span>';
+      const rows=(tripManagerState.trips||[]).map(t=>{const active=t.id===tripManagerState.activeId;return `<button type="button" onclick="switchManagedTripFromHeader('${t.id}')" class="w-full p-3 rounded-2xl border text-left btn-press ${active?'border-skyBlue bg-skyLight':'border-sand bg-card'}"><div class="flex items-center justify-between gap-2"><div class="min-w-0"><div class="font-bold text-wood truncate">${escapeHtml(t.title||'我的旅行')}</div><div class="text-[10px] text-gray-400 mt-1">${String(t.startDate||'').replaceAll('-','/')}–${String(t.endDate||'').replaceAll('-','/')}${t.city?'・'+escapeHtml(t.city):''}</div></div>${active?'<span class="text-[10px] text-skyBlue font-bold shrink-0">目前</span>':'<i class="fa-solid fa-chevron-right text-gray-300 shrink-0"></i>'}</div></button>`}).join('');
+      body.innerHTML=`<button type="button" onclick="returnToSplash()" class="w-full py-3 rounded-xl bg-paper border border-sand text-wood font-bold btn-press"><i class="fa-solid fa-house mr-2 text-torii"></i>回到封面頁</button><div class="space-y-2">${rows}</div><button type="button" onclick="closeGlobalModal();openTripManager()" class="w-full py-2.5 rounded-xl bg-skyLight text-skyBlue font-bold btn-press"><i class="fa-solid fa-suitcase-rolling mr-2"></i>管理／新增旅程</button>`;
+      document.getElementById('global-modal').classList.remove('hidden');
+    }
+    function switchManagedTripFromHeader(id){
+      if(id===tripManagerState.activeId){closeGlobalModal();return;}
+      closeGlobalModal();switchManagedTrip(id);
+    }
     function toggleElement(id) { const el=document.getElementById(id); if(el) el.classList.toggle('hidden'); }
     function toggleExclusivePanel(id, selector) {
       const el=document.getElementById(id); if(!el)return;
@@ -1123,7 +1182,8 @@
       activeTab = tabName;
       requestAnimationFrame(syncStickyHeaderHeight);
       if(tabName==='expense') setTimeout(()=>warmReceiptOCR(),120);
-      if(tabName==='schedule') setTimeout(()=>updateDailyScheduleWeather(false),80);
+      if(tabName==='schedule') setTimeout(()=>updateDailyScheduleWeather(true),80);
+      if(tabName==='tools') setTimeout(()=>{syncWeatherToolToScheduleLocation();updateWeatherDisplay(true)},80);
       document.querySelectorAll('.page-content').forEach(el => el.classList.remove('active'));
       document.getElementById(`page-${tabName}`).classList.add('active');
       
@@ -1237,7 +1297,7 @@
     }
 
     function renderTimeline(index=currentDayIndex){
-      currentDayIndex=index; renderDatePicker(); renderGroupPicker(); updateDailyScheduleWeather(false);
+      currentDayIndex=index; renderDatePicker(); renderGroupPicker(); updateDailyScheduleWeather(true);
       const container=document.getElementById('timeline-container');
       container.innerHTML='';
       const items=visibleItems(index).slice().sort((a,b)=>a.time.localeCompare(b.time));
@@ -1387,7 +1447,7 @@
       const safe=v=>String(v??'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       body.innerHTML=`
         <input id="edit-sch-title" value="${safe(item.title)}" placeholder="景點名稱" class="w-full p-2.5 bg-paper rounded-xl border border-sand">
-        <div><div class="text-[10px] text-gray-400 mb-1">時間</div><input id="edit-sch-time" type="time" value="${item.time||'09:00'}" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div>
+        <div class="mobile-form-grid two"><div><div class="text-[10px] text-gray-400 mb-1">時間</div><input id="edit-sch-time" type="time" value="${item.time||'09:00'}" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div><div><div class="text-[10px] text-gray-400 mb-1">城市／地區（天氣用）</div><input id="edit-sch-city" value="${safe(item.city||'')}" placeholder="例如台南／紐約／河口湖" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div></div>
         <div>
           <div class="text-[10px] text-gray-400 mb-1">Google Maps 搜尋／地址</div>
           <div class="flex gap-2"><input id="edit-sch-address" value="${safe(item.address||item.title)}" placeholder="店名或地址" class="min-w-0 flex-1 p-2.5 bg-paper rounded-xl border border-sand"><a id="edit-sch-map" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.address||item.title)}" target="_blank" class="px-3 py-2.5 rounded-xl bg-skyLight text-skyBlue font-bold"><i class="fa-solid fa-map-location-dot"></i></a></div>
@@ -1426,6 +1486,7 @@
       }
       item.title=title; item.time=time;
       item.address=document.getElementById('edit-sch-address')?.value?.trim()||title;
+      item.city=document.getElementById('edit-sch-city')?.value?.trim()||'';
       item.intro=document.getElementById('edit-sch-intro')?.value?.trim()||'';
       item.note=document.getElementById('edit-sch-note')?.value?.trim()||'';
       item.image=image;
@@ -1434,18 +1495,123 @@
       currentDayIndex=found.dayIndex; renderTimeline(found.dayIndex); closeGlobalModal();
     }
 
+    // ---------------- 航程住宿：新旅程自行建立，不沿用東京預設 ----------------
+    let bookingItems=(()=>{try{return JSON.parse(localStorage.getItem('tripbook-v15-bookings')||'[]')}catch(e){return[]}})();
+    function saveBookingItems(){localStorage.setItem('tripbook-v15-bookings',JSON.stringify(bookingItems));persistActiveTripSnapshot();}
+    function bookingVoucherCard(){return `<div class="bg-card rounded-2xl p-4 shadow-soft border border-sand"><div class="flex items-center justify-between gap-3"><div><div class="text-xs font-bold text-wood"><i class="fa-solid fa-folder-open text-torii mr-1"></i>旅遊憑證（PDF／圖片）</div><div class="text-[9px] text-gray-400 mt-1">可將機票、住宿、門票等 PDF 或圖片憑證儲存在此裝置。</div></div><label class="px-3 py-2 rounded-xl bg-sakuraLight text-torii text-[10px] font-bold btn-press cursor-pointer whitespace-nowrap"><i class="fa-solid fa-upload mr-1"></i>上傳憑證<input id="booking-pdf-input" type="file" accept="application/pdf,.pdf,image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif" multiple class="hidden"></label></div><div id="booking-pdf-list" class="space-y-2 mt-3"></div></div>`;}
+    function formatBookingDate(date){
+      if(!date)return '';
+      const d=new Date(date+'T12:00:00');if(Number.isNaN(d.getTime()))return escapeHtml(date);
+      return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')} (${'日一二三四五六'[d.getDay()]})`;
+    }
+    function bookingFlightCard(x){
+      const fromCode=(x.fromCode||x.from||'DEP').toUpperCase(),toCode=(x.toCode||x.to||'ARR').toUpperCase();
+      const fromName=x.fromName||x.from||'出發機場',toName=x.toName||x.to||'抵達機場';
+      const route=x.routeType||'直飛',label=x.label?` (${escapeHtml(x.label)})`:'';
+      return `<div class="bg-card rounded-2xl p-4 shadow-soft border border-sand relative">
+        <div class="flex justify-between items-start gap-2 border-b border-dashed border-gray-200 pb-2 mb-3">
+          <div class="text-xs font-bold text-skyBlue min-w-0 break-words"><i class="fa-solid fa-plane-departure mr-1"></i>${escapeHtml(x.airline||'航班')} ${escapeHtml(x.flightNo||'')}${label}</div>
+          <div class="flex items-center gap-2 shrink-0"><span class="text-[10px] bg-skyLight text-skyBlue px-2 py-1 rounded-md font-bold">${formatBookingDate(x.date)}</span><button type="button" onclick="event.stopPropagation();openBookingEditor('flight','${x.id}')" class="text-skyBlue p-1" title="編輯"><i class="fa-solid fa-pen-to-square"></i></button><button type="button" onclick="event.stopPropagation();deleteBookingItem('${x.id}')" class="text-red-300 p-1" title="刪除"><i class="fa-solid fa-trash"></i></button></div>
+        </div>
+        <div class="flight-route-grid">
+          <div class="text-center min-w-0"><div class="flight-airport-code">${escapeHtml(fromCode)}</div><div class="flight-airport-name">${escapeHtml(fromName)}</div><div class="flight-time">${escapeHtml(x.departTime||'--:--')}</div></div>
+          <div class="text-center min-w-0"><div class="text-[10px] text-gray-400 mb-1">${escapeHtml(route)}</div><div class="h-0.5 bg-sand relative"><i class="fa-solid fa-plane text-skyBlue text-xs absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2"></i></div><div class="text-[9px] text-gray-400 mt-2">${x.note?'航班備註':'點編輯輸入備註'}</div></div>
+          <div class="text-center min-w-0"><div class="flight-airport-code">${escapeHtml(toCode)}</div><div class="flight-airport-name">${escapeHtml(toName)}</div><div class="flight-time">${escapeHtml(x.arriveTime||'--:--')}</div></div>
+        </div>
+        ${x.note?`<div class="mt-3 pt-3 border-t border-dashed text-[10px] text-gray-500 break-words"><i class="fa-regular fa-note-sticky mr-1 text-skyBlue"></i>${escapeHtml(x.note)}</div>`:''}
+      </div>`;
+    }
+    function bookingHotelCard(x){return `<div class="bg-card rounded-2xl p-4 shadow-soft border border-sand"><div class="flex justify-between items-start gap-2"><div class="flex gap-3 min-w-0"><div class="w-10 h-10 rounded-xl bg-sakuraLight flex items-center justify-center text-torii shrink-0"><i class="fa-solid fa-house"></i></div><div class="min-w-0"><div class="font-bold text-wood text-sm">${escapeHtml(x.name||'住宿')}</div><div class="text-[10px] text-skyBlue font-bold mt-1">${escapeHtml(x.checkin||'')} ${x.checkout?'– '+escapeHtml(x.checkout):''}</div><div class="text-[10px] text-gray-500 mt-1 break-words">${escapeHtml(x.address||'')}</div>${x.note?`<div class="text-[10px] text-gray-400 mt-1">${escapeHtml(x.note)}</div>`:''}</div></div><div class="flex gap-1 shrink-0"><button type="button" onclick="openBookingEditor('hotel','${x.id}')" class="text-skyBlue p-1"><i class="fa-solid fa-pen-to-square"></i></button><button type="button" onclick="deleteBookingItem('${x.id}')" class="text-red-300 p-1"><i class="fa-solid fa-trash"></i></button></div></div></div>`;}
+    function renderBookingsForTrip(){
+      if(shouldUseTokyoSeed())return;
+      const box=document.getElementById('bookings-list');if(!box)return;
+      const cards=bookingItems.map(x=>x.type==='flight'?bookingFlightCard(x):bookingHotelCard(x)).join('');
+      box.innerHTML=bookingVoucherCard()+`<div class="grid grid-cols-2 gap-2"><button onclick="openBookingEditor('flight')" class="py-3 rounded-xl bg-skyLight text-skyBlue font-bold text-xs btn-press"><i class="fa-solid fa-plane-departure mr-1"></i>新增航班</button><button onclick="openBookingEditor('hotel')" class="py-3 rounded-xl bg-sakuraLight text-torii font-bold text-xs btn-press"><i class="fa-solid fa-hotel mr-1"></i>新增住宿</button></div>`+(cards||'<div class="text-center text-gray-400 text-xs py-8">尚未填寫航班或住宿，請自行新增。</div>');
+      renderBookingPdfs();
+    }
+    function openBookingEditor(type,id=''){
+      const item=id?bookingItems.find(x=>String(x.id)===String(id)):null,edit=!!item;
+      document.getElementById('modal-title').innerText=edit?(type==='flight'?'編輯航班':'編輯住宿'):(type==='flight'?'新增航班':'新增住宿');
+      if(type==='flight'){
+        const v=k=>escapeHtml(item?.[k]||'');
+        document.getElementById('modal-form-body').innerHTML=`
+          <div class="mobile-form-grid two"><input id="bk-airline" value="${v('airline')}" placeholder="航空公司，例如中華航空" class="w-full p-2.5 bg-paper rounded-xl border border-sand"><input id="bk-flightno" value="${v('flightNo')}" placeholder="航班號碼，例如 CI100" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div>
+          <div class="mobile-form-grid two"><input id="bk-label" value="${v('label')}" placeholder="航程標籤，例如去程／回程" class="w-full p-2.5 bg-paper rounded-xl border border-sand"><div><label class="block text-[10px] text-gray-400 mb-1">航班日期</label><input id="bk-date" type="date" value="${v('date')}" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div></div>
+          <div class="p-3 rounded-2xl bg-skyLight/50 border border-skyBlue/20 space-y-2"><div class="font-bold text-xs text-skyBlue"><i class="fa-solid fa-plane-departure mr-1"></i>出發</div><div class="mobile-form-grid two"><input id="bk-from-code" value="${escapeHtml(item?.fromCode||item?.from||'')}" maxlength="6" placeholder="機場代碼，例如 TPE" class="w-full p-2.5 bg-card rounded-xl border border-sand uppercase"><input id="bk-from-name" value="${escapeHtml(item?.fromName||item?.from||'')}" placeholder="機場／航廈，例如桃園機場 T2" class="w-full p-2.5 bg-card rounded-xl border border-sand"></div><div><label class="block text-[10px] text-gray-400 mb-1">起飛時間</label><input id="bk-depart" type="time" value="${v('departTime')}" class="w-full p-2.5 bg-card rounded-xl border border-sand"></div></div>
+          <div class="p-3 rounded-2xl bg-sakuraLight/50 border border-sakura/30 space-y-2"><div class="font-bold text-xs text-torii"><i class="fa-solid fa-plane-arrival mr-1"></i>抵達</div><div class="mobile-form-grid two"><input id="bk-to-code" value="${escapeHtml(item?.toCode||item?.to||'')}" maxlength="6" placeholder="機場代碼，例如 NRT" class="w-full p-2.5 bg-card rounded-xl border border-sand uppercase"><input id="bk-to-name" value="${escapeHtml(item?.toName||item?.to||'')}" placeholder="機場／航廈，例如成田機場 T2" class="w-full p-2.5 bg-card rounded-xl border border-sand"></div><div><label class="block text-[10px] text-gray-400 mb-1">抵達時間</label><input id="bk-arrive" type="time" value="${v('arriveTime')}" class="w-full p-2.5 bg-card rounded-xl border border-sand"></div></div>
+          <div class="mobile-form-grid two"><input id="bk-route" value="${escapeHtml(item?.routeType||'直飛')}" placeholder="航程，例如直飛／轉機" class="w-full p-2.5 bg-paper rounded-xl border border-sand"><textarea id="bk-note" placeholder="座位、行李、訂位代號或其他備註" class="w-full p-2.5 bg-paper rounded-xl border border-sand h-20">${v('note')}</textarea></div>
+          <button onclick="submitBookingItem('flight','${id}')" class="w-full py-2.5 bg-skyBlue text-white rounded-xl font-bold">${edit?'儲存修改':'儲存航班'}</button>`;
+      }else{
+        const v=k=>escapeHtml(item?.[k]||'');
+        document.getElementById('modal-form-body').innerHTML=`<input id="bk-name" value="${v('name')}" placeholder="飯店／住宿名稱 *" class="w-full p-2.5 bg-paper rounded-xl border border-sand"><div class="mobile-form-grid two"><div><label class="block text-[10px] text-gray-400 mb-1">入住</label><input id="bk-checkin" type="date" value="${v('checkin')}" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div><div><label class="block text-[10px] text-gray-400 mb-1">退房</label><input id="bk-checkout" type="date" value="${v('checkout')}" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div></div><input id="bk-address" value="${v('address')}" placeholder="地址（選填）" class="w-full p-2.5 bg-paper rounded-xl border border-sand"><textarea id="bk-note" placeholder="訂房編號、早餐、入住提醒等" class="w-full p-2.5 bg-paper rounded-xl border border-sand h-20">${v('note')}</textarea><button onclick="submitBookingItem('hotel','${id}')" class="w-full py-2.5 bg-torii text-white rounded-xl font-bold">${edit?'儲存修改':'儲存住宿'}</button>`;
+      }
+      document.getElementById('global-modal').classList.remove('hidden');
+    }
+    function submitBookingItem(type,id=''){
+      const existing=id?bookingItems.find(x=>String(x.id)===String(id)):null;
+      if(type==='flight'){
+        const fromCode=document.getElementById('bk-from-code').value.trim().toUpperCase(),toCode=document.getElementById('bk-to-code').value.trim().toUpperCase(),fromName=document.getElementById('bk-from-name').value.trim(),toName=document.getElementById('bk-to-name').value.trim();
+        if(!fromCode||!toCode)return alert('請填寫出發與抵達機場代碼');
+        const obj={id:existing?.id||'bk-'+Date.now(),type,airline:document.getElementById('bk-airline').value.trim(),flightNo:document.getElementById('bk-flightno').value.trim(),label:document.getElementById('bk-label').value.trim(),fromCode,toCode,fromName:fromName||fromCode,toName:toName||toCode,from:fromCode,to:toCode,date:document.getElementById('bk-date').value,departTime:document.getElementById('bk-depart').value,arriveTime:document.getElementById('bk-arrive').value,routeType:document.getElementById('bk-route').value.trim()||'直飛',note:document.getElementById('bk-note').value.trim()};
+        if(existing)Object.assign(existing,obj);else bookingItems.push(obj);
+      }else{
+        const name=document.getElementById('bk-name').value.trim();if(!name)return alert('請填寫住宿名稱');
+        const obj={id:existing?.id||'bk-'+Date.now(),type,name,checkin:document.getElementById('bk-checkin').value,checkout:document.getElementById('bk-checkout').value,address:document.getElementById('bk-address').value.trim(),note:document.getElementById('bk-note').value.trim()};
+        if(existing)Object.assign(existing,obj);else bookingItems.push(obj);
+      }
+      saveBookingItems();closeGlobalModal();renderBookingsForTrip();initBookingPdfUpload();
+    }
+    function deleteBookingItem(id){if(!confirm('確定刪除這筆航程／住宿資料？'))return;bookingItems=bookingItems.filter(x=>String(x.id)!==String(id));saveBookingItems();renderBookingsForTrip();initBookingPdfUpload();}
+
     // ---------------- 記帳：照片保存、點擊展開、可編輯 OCR 金額 ----------------
     let expenses = (()=>{try{const s=localStorage.getItem('tokyo-expenses-v2');return s?JSON.parse(s):[
       { id:1,note:'一蘭拉麵',amount:1980,currency:'JPY',category:'餐飲',payMethod:'現金',time:'2026/10/25 18:30',receiptImage:'' },
       { id:2,note:'Suica 加值',amount:3000,currency:'JPY',category:'交通',payMethod:'交通卡',time:'2026/10/25 13:30',receiptImage:'' }
     ]}catch(e){return[]}})();
     let currentCategoryFilter='全部';
+    let expenseViewMode='list';
+    const EXPENSE_SPLIT_MEMBERS_KEY='tokyo-expense-split-members-v1';
+    let splitMembers=(()=>{try{const x=JSON.parse(localStorage.getItem(EXPENSE_SPLIT_MEMBERS_KEY)||'[]');return Array.isArray(x)?x.filter(m=>m&&m.id&&m.name):[]}catch(e){return[]}})();
+    function saveSplitMembers(){localStorage.setItem(EXPENSE_SPLIT_MEMBERS_KEY,JSON.stringify(splitMembers));}
+    function splitIdsForExpense(item){
+      const valid=new Set(splitMembers.map(m=>String(m.id)));
+      return (Array.isArray(item?.splitWith)?item.splitWith:[]).map(String).filter(id=>valid.has(id));
+    }
+    function splitMemberPickerHtml(selected=[]){
+      const chosen=new Set((selected||[]).map(String));
+      if(!splitMembers.length)return `<div class="p-3 rounded-2xl bg-paper border border-sand text-[10px] text-gray-500"><i class="fa-solid fa-user-group text-skyBlue mr-1"></i>尚未設定分帳人員。可先至「記帳設定 → 分帳人員」新增；未選人員的支出不會列入拆帳。</div>`;
+      const allChecked=splitMembers.length>0&&splitMembers.every(m=>chosen.has(String(m.id)));
+      return `<div class="p-3 rounded-2xl bg-paper border border-sand space-y-2"><div class="flex items-center justify-between gap-2"><div class="font-bold text-wood text-xs"><i class="fa-solid fa-user-group text-skyBlue mr-1"></i>分帳人員</div><label class="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-skyLight text-skyBlue border border-skyBlue/20 cursor-pointer btn-press"><input id="expense-split-select-all" type="checkbox" ${allChecked?'checked':''} onchange="toggleAllExpenseSplitMembers(this.checked)" class="accent-sky-500"><span class="text-[10px] font-bold">全選</span></label></div><div class="text-[9px] text-gray-400">可複選・平均分攤</div><div class="grid grid-cols-2 gap-2">${splitMembers.map(m=>`<label class="min-w-0 flex items-center gap-2 p-2 rounded-xl bg-card border border-sand cursor-pointer"><input type="checkbox" name="expense-split-member" value="${escapeHtml(m.id)}" ${chosen.has(String(m.id))?'checked':''} onchange="syncExpenseSplitSelectAll()" class="accent-sky-500 shrink-0"><span class="truncate text-xs font-bold text-wood">${escapeHtml(m.name)}</span></label>`).join('')}</div></div>`;
+    }
+    function toggleAllExpenseSplitMembers(checked){
+      document.querySelectorAll('input[name="expense-split-member"]').forEach(x=>{x.checked=!!checked;});
+      syncExpenseSplitSelectAll();
+    }
+    function syncExpenseSplitSelectAll(){
+      const boxes=[...document.querySelectorAll('input[name="expense-split-member"]')],all=document.getElementById('expense-split-select-all');
+      if(!all)return;
+      const n=boxes.filter(x=>x.checked).length;
+      all.checked=boxes.length>0&&n===boxes.length;
+      all.indeterminate=n>0&&n<boxes.length;
+    }
+    function selectedSplitMemberIds(){return [...document.querySelectorAll('input[name="expense-split-member"]:checked')].map(x=>x.value);}
+    function baseCurrency(){return String(tripConfig.baseCurrency||'NTD').trim().toUpperCase()||'NTD';}
+    function foreignCurrency(){return String(tripConfig.foreignCurrency||'JPY').trim().toUpperCase()||'JPY';}
+    function toBaseAmount(amount,currency){return String(currency).toUpperCase()===foreignCurrency()?amount*currentExchangeRate:amount;}
+    function toForeignAmount(amount,currency){return String(currency).toUpperCase()===foreignCurrency()?amount:(currentExchangeRate?amount/currentExchangeRate:0);}
+    function expenseCurrencyOptions(selected){return [foreignCurrency(),baseCurrency()].filter((x,i,a)=>a.indexOf(x)===i).map(c=>`<option value="${c}" ${String(selected||'').toUpperCase()===c?'selected':''}>${c}</option>`).join('');}
+    function applyCurrencyUI(){
+      const b=baseCurrency(),f=foreignCurrency();
+      [['base-currency-label',b],['budget-currency-label',b],['budget-spent-currency',b],['budget-left-currency',b],['foreign-currency-label',f],['tool-foreign-label',f],['aa-currency-label','金額 '+f]].forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.textContent=v});
+      const rc=document.getElementById('rate-caption');if(rc)rc.textContent=`匯率 1 ${f} = ${currentExchangeRate} ${b}`;
+    }
+
     function saveExpenses(){localStorage.setItem('tokyo-expenses-v2',JSON.stringify(expenses));localStorage.setItem('tokyo-rate-v2',String(currentExchangeRate));}
     const savedRate=parseFloat(localStorage.getItem('tokyo-rate-v2')); if(!isNaN(savedRate))currentExchangeRate=savedRate;
     let travelBudget=parseFloat(localStorage.getItem('tokyo-budget-v2')); if(isNaN(travelBudget)||travelBudget<=0)travelBudget=80000;
     function saveBudget(){localStorage.setItem('tokyo-budget-v2',String(travelBudget));}
 
-    function changeExchangeRate(){const n=prompt('請輸入新匯率 (例如 0.22):',currentExchangeRate);if(n&&!isNaN(n)){currentExchangeRate=parseFloat(n);document.getElementById('rate-display').innerText=currentExchangeRate;saveExpenses();renderExpenses();calcToolExchange();}}
+    function changeExchangeRate(){const n=prompt(`請輸入匯率：1 ${foreignCurrency()} = ? ${baseCurrency()}`,currentExchangeRate);if(n&&!isNaN(n)&&Number(n)>0){currentExchangeRate=parseFloat(n);tripConfig.exchangeRate=currentExchangeRate;saveTripConfig();saveExpenses();applyCurrencyUI();renderExpenses();calcToolExchange();}}
     function openExpenseSettings(){
       document.getElementById('modal-title').innerHTML='<span><i class="fa-solid fa-gear text-skyBlue mr-2"></i>記帳設定</span>';
       document.getElementById('modal-form-body').innerHTML=`
@@ -1455,14 +1621,79 @@
           <button type="button" onclick="exportExpensesCSV();closeGlobalModal()" class="p-3 rounded-xl bg-[#EBF6EC] text-emerald-700 font-bold btn-press"><i class="fa-solid fa-file-csv mr-1.5"></i>匯出 CSV</button>
           <button type="button" onclick="exportExpensesExcel();closeGlobalModal()" class="p-3 rounded-xl bg-[#EBF6EC] text-emerald-700 font-bold btn-press"><i class="fa-solid fa-file-excel mr-1.5"></i>匯出 Excel</button>
         </div>
-        <div class="text-[10px] text-gray-400 bg-paper rounded-xl p-2.5">目前匯率：1 日圓 ≈ NT$ <b>${currentExchangeRate}</b><br>目前旅遊總預算：NT$ <b>${Math.round(travelBudget).toLocaleString()}</b><br>匯出檔案包含日期、項目、類別、付款方式、原幣金額與台幣估算；不嵌入收據照片。</div>`;
+        <button type="button" onclick="openSplitMemberSettings()" class="w-full p-3 rounded-xl bg-[#FFF0E8] border border-[#F5C9B4] text-wood font-bold btn-press"><i class="fa-solid fa-user-group text-torii mr-1.5"></i>分帳人員 <span class="text-[10px] text-gray-400 ml-1">${splitMembers.length} 人</span></button>
+        <div class="text-[10px] text-gray-400 bg-paper rounded-xl p-2.5">目前匯率：1 ${foreignCurrency()} = <b>${currentExchangeRate}</b> ${baseCurrency()}<br>目前旅遊總預算：${baseCurrency()} <b>${Math.round(travelBudget).toLocaleString()}</b><br>匯出檔案包含日期、項目、類別、付款方式、原幣金額與 ${baseCurrency()} 估算；不嵌入收據照片。</div>`;
       document.getElementById('global-modal').classList.remove('hidden');
     }
+    function openSplitMemberSettings(){
+      document.getElementById('modal-title').innerHTML='<span><i class="fa-solid fa-user-group text-skyBlue mr-2"></i>分帳人員</span>';
+      const rows=splitMembers.length?splitMembers.map(m=>{
+        const used=expenses.filter(e=>splitIdsForExpense(e).includes(String(m.id))).length;
+        return `<div class="flex items-center justify-between gap-3 p-3 rounded-xl bg-paper border border-sand"><div class="min-w-0"><div class="font-bold text-wood truncate">${escapeHtml(m.name)}</div><div class="text-[9px] text-gray-400 mt-0.5">${used} 筆消費已使用</div></div><button type="button" onclick="deleteSplitMember('${escapeHtml(m.id)}')" class="w-9 h-9 shrink-0 rounded-xl bg-sakuraLight text-torii btn-press" title="刪除"><i class="fa-solid fa-trash"></i></button></div>`;
+      }).join(''):'<div class="text-center text-gray-400 py-4">尚未新增分帳人員</div>';
+      document.getElementById('modal-form-body').innerHTML=`
+        <div class="space-y-2">
+          <label class="block text-xs font-bold text-wood">請輸入分帳人員名稱：</label>
+          <div class="flex gap-2"><input id="split-member-name" type="text" placeholder="例如：王曉明" class="min-w-0 flex-1 p-2.5 bg-paper rounded-xl border border-sand"><button type="button" onclick="addSplitMemberFromSettings()" class="px-4 rounded-xl bg-skyBlue text-white font-bold btn-press"><i class="fa-solid fa-plus"></i></button></div>
+        </div>
+        <div class="space-y-2">${rows}</div>
+        <div class="text-[9px] text-gray-400 bg-paper rounded-xl p-2.5">新增人員後，在每筆記帳中勾選參與分帳的人員；系統會以該筆總額平均分攤。刪除人員時，也會從既有支出的分帳名單中移除。</div>
+        <button type="button" onclick="openExpenseSettings()" class="w-full py-2.5 rounded-xl bg-paper border border-sand text-wood font-bold btn-press"><i class="fa-solid fa-arrow-left mr-1"></i>返回記帳設定</button>`;
+      setTimeout(()=>document.getElementById('split-member-name')?.focus(),80);
+    }
+    function addSplitMemberFromSettings(){
+      const input=document.getElementById('split-member-name'),name=input?.value?.trim();
+      if(!name)return alert('請輸入人員名稱');
+      if(splitMembers.some(m=>m.name.trim().toLowerCase()===name.toLowerCase()))return alert('此人員名稱已存在');
+      splitMembers.push({id:'person-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),name});
+      saveSplitMembers();persistActiveTripSnapshot();openSplitMemberSettings();
+    }
+    function deleteSplitMember(id){
+      const m=splitMembers.find(x=>String(x.id)===String(id));if(!m)return;
+      const used=expenses.filter(e=>splitIdsForExpense(e).includes(String(id))).length;
+      if(!confirm(`確定刪除「${m.name}」？${used?`\n此人目前出現在 ${used} 筆分帳中，刪除後會同步移除。`:''}`))return;
+      splitMembers=splitMembers.filter(x=>String(x.id)!==String(id));
+      expenses.forEach(e=>{if(Array.isArray(e.splitWith))e.splitWith=e.splitWith.map(String).filter(x=>x!==String(id));});
+      saveSplitMembers();saveExpenses();persistActiveTripSnapshot();openSplitMemberSettings();
+      if(expenseViewMode==='split')renderExpenses();
+    }
     function filterExpenseCategory(cat){
+      expenseViewMode='list';
+      document.getElementById('expense-split-summary-btn')?.classList.remove('active');
       currentCategoryFilter=cat;
       document.getElementById('expense-list-title').innerText=`支出明細 (${cat})`;
       document.querySelectorAll('.expense-filter-btn').forEach(b=>b.classList.toggle('active',b.dataset.expenseCat===cat));
       renderExpenses();
+    }
+
+    function showExpenseSplitSummary(){
+      expenseViewMode='split';currentCategoryFilter='全部';
+      document.querySelectorAll('.expense-filter-btn').forEach(b=>b.classList.remove('active'));
+      document.getElementById('expense-split-summary-btn')?.classList.add('active');
+      renderExpenses();
+    }
+    function toggleSplitMemberDetail(id){
+      const el=document.getElementById(`split-detail-${id}`),icon=document.getElementById(`split-icon-${id}`);if(!el)return;
+      const opening=el.classList.contains('hidden');el.classList.toggle('hidden',!opening);if(icon)icon.classList.toggle('rotate-180',opening);
+    }
+    function renderExpenseSplitSummary(list){
+      const title=document.getElementById('expense-list-title');if(title)title.textContent='分帳人員明細';
+      if(!splitMembers.length){list.innerHTML='<div class="p-5 text-center rounded-2xl bg-paper border border-sand text-gray-400"><i class="fa-solid fa-user-group text-2xl text-skyBlue mb-2"></i><div class="font-bold text-wood">尚未設定分帳人員</div><div class="text-[10px] mt-1">請至右上角齒輪 → 分帳人員新增。</div><button type="button" onclick="openExpenseSettings()" class="mt-3 px-4 py-2 rounded-xl bg-skyLight text-skyBlue font-bold btn-press">前往設定</button></div>';return;}
+      list.innerHTML='';
+      splitMembers.forEach(member=>{
+        const items=expenses.filter(e=>splitIdsForExpense(e).includes(String(member.id))).slice().sort((a,b)=>String(a.time).localeCompare(String(b.time)));
+        const totalBase=items.reduce((sum,item)=>{const ids=splitIdsForExpense(item),share=ids.length?(Number(item.amount)||0)/ids.length:0;return sum+toBaseAmount(share,item.currency)},0);
+        const card=document.createElement('div');card.className='rounded-2xl border border-sand bg-paper overflow-hidden';
+        card.innerHTML=`<button type="button" onclick="toggleSplitMemberDetail('${escapeHtml(member.id)}')" class="w-full p-3.5 flex items-center justify-between gap-3 text-left btn-press"><div class="min-w-0"><div class="font-bold text-wood text-sm truncate">${escapeHtml(member.name)}</div><div class="text-[10px] text-gray-400 mt-0.5">${items.length} 筆消費</div></div><div class="flex items-center gap-3 shrink-0"><div class="text-right"><div class="font-bold text-torii text-base">${baseCurrency()} ${Math.round(totalBase).toLocaleString()}</div><div class="text-[9px] text-gray-400">點擊展開明細</div></div><i id="split-icon-${escapeHtml(member.id)}" class="fa-solid fa-chevron-down text-gray-400 transition-transform"></i></div></button><div id="split-detail-${escapeHtml(member.id)}" class="hidden border-t border-dashed border-sand p-2.5 space-y-2"></div>`;
+        list.appendChild(card);
+        const body=card.querySelector(`#split-detail-${CSS.escape(String(member.id))}`);
+        if(!items.length){body.innerHTML='<div class="text-center text-[10px] text-gray-400 py-3">目前沒有分配給此人員的支出。</div>';return;}
+        items.forEach(item=>{
+          const ids=splitIdsForExpense(item),count=ids.length,amount=Number(item.amount)||0,share=count?amount/count:0,baseShare=toBaseAmount(share,item.currency);
+          const row=document.createElement('div');row.className='p-3 bg-card rounded-xl border border-sand/70';
+          row.innerHTML=`<div class="flex items-start justify-between gap-3"><div class="min-w-0 flex-1"><div class="font-bold text-wood">${escapeHtml(item.note||'未命名')}</div><div class="text-[10px] mt-1"><span class="text-skyBlue font-bold">${count} 人</span><span class="text-gray-400"> ・ ${escapeHtml(item.category||'其他')} ・ ${escapeHtml(item.payMethod||'')} ${expenseTimeOnly(item)?'・ '+escapeHtml(expenseTimeOnly(item)):''}</span></div></div><div class="text-right shrink-0"><div class="text-[10px] text-wood">共 <b>${escapeHtml(item.currency||baseCurrency())} ${amount.toLocaleString(undefined,{maximumFractionDigits:2})}</b></div><div class="font-bold text-torii mt-0.5">分攤 ${escapeHtml(item.currency||baseCurrency())} ${share.toLocaleString(undefined,{maximumFractionDigits:2})}</div><div class="text-[9px] text-gray-400">約 ${baseCurrency()} ${Math.round(baseShare).toLocaleString()}</div></div></div>`;body.appendChild(row);
+        });
+      });
     }
 
     function expenseDateInfo(item){
@@ -1490,6 +1721,9 @@
       const m=raw.match(/(?:\d{4}[\/\-.]\d{1,2}[\/\-.]\d{1,2})\s*(.*)$/);
       return (m?.[1]||raw||'').trim();
     }
+    function localDateInputValue(d=new Date()){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;}
+    function localTimeHHMM(d=new Date()){return `${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;}
+    function expenseDateInputValue(item){const m=String(item?.time||'').match(/(\d{4})[\/\-.](\d{1,2})[\/\-.](\d{1,2})/);return m?`${m[1]}-${String(m[2]).padStart(2,'0')}-${String(m[3]).padStart(2,'0')}`:localDateInputValue();}
 
     function toggleExpenseDateGroup(key){
       const body=[...document.querySelectorAll('[data-expense-day-body]')].find(el=>el.dataset.expenseDayBody===key);
@@ -1507,9 +1741,20 @@
       let displayTotalTwd=0,displayTotalJpy=0;
       filtered.forEach(item=>{
         const amount=Number(item.amount)||0;
-        displayTotalTwd+=item.currency==='JPY'?amount*currentExchangeRate:amount;
-        displayTotalJpy+=item.currency==='JPY'?amount:amount/currentExchangeRate;
+        displayTotalTwd+=toBaseAmount(amount,item.currency);
+        displayTotalJpy+=toForeignAmount(amount,item.currency);
       });
+
+      if(expenseViewMode==='split'){
+        renderExpenseSplitSummary(list);
+        const spentBase=expenses.reduce((sum,item)=>sum+toBaseAmount(Number(item.amount)||0,item.currency),0);
+        document.getElementById('total-jpy').innerText=Math.round(displayTotalJpy).toLocaleString();
+        document.getElementById('total-twd').innerText=Math.round(displayTotalTwd).toLocaleString();
+        applyCurrencyUI();
+        const label=document.getElementById('expense-total-label');if(label)label.innerText='總累計支出';
+        renderBudget(Math.round(spentBase));
+        return;
+      }
 
       const groups=[];
       const groupMap=new Map();
@@ -1529,7 +1774,7 @@
       groups.forEach(group=>{
         const dayTwd=group.items.reduce((sum,item)=>{
           const amount=Number(item.amount)||0;
-          return sum+(item.currency==='JPY'?amount*currentExchangeRate:amount);
+          return sum+(toBaseAmount(amount,item.currency));
         },0);
         const wrap=document.createElement('div');
         wrap.className='bg-paper rounded-2xl border border-sand/70 overflow-hidden';
@@ -1540,7 +1785,7 @@
               <div class="text-[10px] text-gray-400 mt-0.5">${group.items.length} 筆消費</div>
             </div>
             <div class="flex items-center gap-3 shrink-0">
-              <div class="text-right"><div class="font-bold text-torii">約 NT$ ${Math.round(dayTwd).toLocaleString()}</div><div class="text-[9px] text-gray-400">點擊展開明細</div></div>
+              <div class="text-right"><div class="font-bold text-torii">約 ${baseCurrency()} ${Math.round(dayTwd).toLocaleString()}</div><div class="text-[9px] text-gray-400">點擊展開明細</div></div>
               <i data-expense-day-icon="${group.key}" class="fa-solid fa-chevron-down text-gray-400 transition-transform"></i>
             </div>
           </button>
@@ -1549,15 +1794,15 @@
         const body=wrap.querySelector('[data-expense-day-body]');
         group.items.forEach(item=>{
           const amount=Number(item.amount)||0;
-          const approxTwd=item.currency==='JPY'?Math.round(amount*currentExchangeRate):Math.round(amount);
+          const approxTwd=Math.round(toBaseAmount(amount,item.currency));
           const row=document.createElement('div');
           row.className='p-2.5 bg-card rounded-xl border border-sand/60';
           row.innerHTML=`<div class="flex justify-between items-center gap-2 cursor-pointer" onclick="toggleExpenseDetail(${item.id})">
             <div class="min-w-0 flex-1">
               <div class="font-bold text-wood truncate">${item.note}</div>
-              <div class="text-[10px] text-gray-400 mt-0.5"><span class="bg-skyLight text-skyBlue px-1.5 py-0.5 rounded font-bold mr-1">${item.category}</span> ・ ${item.payMethod}${expenseTimeOnly(item)?` ・ ${expenseTimeOnly(item)}`:''}</div>
+              <div class="text-[10px] text-gray-400 mt-0.5"><span class="bg-skyLight text-skyBlue px-1.5 py-0.5 rounded font-bold mr-1">${item.category}</span> ・ ${item.payMethod}${splitIdsForExpense(item).length?` ・ <span class="text-skyBlue font-bold">${splitIdsForExpense(item).length}人分帳</span>`:''}${expenseTimeOnly(item)?` ・ ${expenseTimeOnly(item)}`:''}</div>
             </div>
-            <div class="text-right shrink-0"><div class="font-bold text-torii">${item.currency==='JPY'?'¥':'NT$'} ${amount.toLocaleString()}</div><div class="text-[9px] text-gray-400">約 NT$${approxTwd.toLocaleString()}</div></div>
+            <div class="text-right shrink-0"><div class="font-bold text-torii">${escapeHtml(String(item.currency||baseCurrency()))} ${amount.toLocaleString()}</div><div class="text-[9px] text-gray-400">約 ${baseCurrency()} ${approxTwd.toLocaleString()}</div></div>
           </div>
           <div id="expense-detail-${item.id}" class="hidden pt-3 mt-2 border-t border-dashed space-y-2">
             ${item.receiptImage?`<button class="w-full" onclick="event.stopPropagation();showReceiptPhoto(${item.id})">${mediaImgTag(item.receiptImage,'receipt-preview','收據照片')}</button>`:'<div class="text-[10px] text-gray-400">此筆沒有收據照片</div>'}
@@ -1568,10 +1813,10 @@
       });
 
       hydrateMediaImages(list);
-      const spentTwd=expenses.reduce((sum,item)=>{const amount=Number(item.amount)||0;return sum+(item.currency==='JPY'?amount*currentExchangeRate:amount)},0);
+      const spentTwd=expenses.reduce((sum,item)=>{const amount=Number(item.amount)||0;return sum+(toBaseAmount(amount,item.currency))},0);
       document.getElementById('total-jpy').innerText=Math.round(displayTotalJpy).toLocaleString();
       document.getElementById('total-twd').innerText=Math.round(displayTotalTwd).toLocaleString();
-      document.getElementById('rate-display').innerText=currentExchangeRate;
+      applyCurrencyUI();
       const label=document.getElementById('expense-total-label');
       if(label)label.innerText=currentCategoryFilter==='全部'?'總累計支出':currentCategoryFilter+'累計支出';
       renderBudget(Math.round(spentTwd));
@@ -1584,23 +1829,23 @@
       const fill=document.getElementById('budget-fill');if(fill)fill.style.width=pct+'%';
     }
     function editTravelBudget(){
-      const v=prompt('請輸入旅遊總預算（台幣）',travelBudget);
+      const v=prompt('請輸入旅遊總預算（${baseCurrency()}）',travelBudget);
       if(v===null)return;const n=Number(v);if(!Number.isFinite(n)||n<=0)return alert('請輸入有效預算');
       travelBudget=n;saveBudget();renderExpenses();
     }
     function exportRows(){
       return expenses.slice().sort((a,b)=>String(a.time).localeCompare(String(b.time))).map(e=>({
-        日期時間:e.time,項目:e.note,類別:e.category,付款方式:e.payMethod,幣別:e.currency,原幣金額:Number(e.amount),台幣估算:Math.round(e.currency==='JPY'?Number(e.amount)*currentExchangeRate:Number(e.amount))
+        日期時間:e.time,項目:e.note,類別:e.category,付款方式:e.payMethod,幣別:e.currency,原幣金額:Number(e.amount),[baseCurrency()+'估算']:Math.round(toBaseAmount(Number(e.amount),e.currency))
       }));
     }
     function exportExpensesCSV(){
-      const rows=exportRows(),headers=['日期時間','項目','類別','付款方式','幣別','原幣金額','台幣估算'];
+      const rows=exportRows(),headers=['日期時間','項目','類別','付款方式','幣別','原幣金額',baseCurrency()+'估算'];
       const escCsv=v=>'"'+String(v??'').replace(/"/g,'""')+'"';
       const csv='\ufeff'+[headers.join(','),...rows.map(r=>headers.map(h=>escCsv(r[h])).join(','))].join('\r\n');
       downloadBlob(new Blob([csv],{type:'text/csv;charset=utf-8'}),'Tokyo_2026_記帳.csv');
     }
     function exportExpensesExcel(){
-      const rows=exportRows(),headers=['日期時間','項目','類別','付款方式','幣別','原幣金額','台幣估算'];
+      const rows=exportRows(),headers=['日期時間','項目','類別','付款方式','幣別','原幣金額',baseCurrency()+'估算'];
       const e=s=>String(s??'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
       const table=`<html><head><meta charset="UTF-8"></head><body><table border="1"><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr>${rows.map(r=>`<tr>${headers.map(h=>`<td>${e(r[h])}</td>`).join('')}</tr>`).join('')}</table></body></html>`;
       downloadBlob(new Blob(['\ufeff',table],{type:'application/vnd.ms-excel'}),'Tokyo_2026_記帳.xls');
@@ -1620,12 +1865,14 @@
     function editExpense(id){
       const item=expenses.find(x=>x.id===id);if(!item)return;
       document.getElementById('modal-title').innerText='編輯支出';document.getElementById('modal-form-body').innerHTML=`
-        <input id="edit-exp-note" value="${item.note}" class="w-full p-2.5 bg-paper rounded-xl border border-sand">
-        <div class="grid grid-cols-2 gap-2"><input type="number" id="edit-exp-amount" value="${item.amount}" class="w-full p-2.5 bg-paper rounded-xl border border-sand"><select id="edit-exp-curr" class="w-full p-2.5 bg-paper rounded-xl border border-sand"><option value="JPY" ${item.currency==='JPY'?'selected':''}>日幣 JPY</option><option value="NTD" ${item.currency==='NTD'?'selected':''}>台幣 NTD</option></select></div>
+        <input id="edit-exp-note" value="${escapeHtml(item.note||'')}" class="w-full p-2.5 bg-paper rounded-xl border border-sand">
+        <div><label class="block text-[10px] text-gray-400 mb-1">消費日期</label><input type="date" id="edit-exp-date" value="${expenseDateInputValue(item)}" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div>
+        <div class="mobile-form-grid two"><input type="number" id="edit-exp-amount" value="${item.amount}" class="w-full p-2.5 bg-paper rounded-xl border border-sand"><select id="edit-exp-curr" class="w-full p-2.5 bg-paper rounded-xl border border-sand">${expenseCurrencyOptions(item.currency)}</select></div>
         <div class="grid grid-cols-2 gap-2"><select id="edit-exp-pay" class="w-full p-2 bg-paper rounded-xl border border-sand">${['現金','信用卡','交通卡'].map(x=>`<option ${item.payMethod===x?'selected':''}>${x}</option>`).join('')}</select><select id="edit-exp-cat" class="w-full p-2 bg-paper rounded-xl border border-sand">${['餐飲','交通','購物','票券','伴手禮','其他'].map(x=>`<option ${item.category===x?'selected':''}>${x}</option>`).join('')}</select></div>
+        ${splitMemberPickerHtml(splitIdsForExpense(item))}
         ${item.receiptImage?mediaImgTag(item.receiptImage,'receipt-preview','收據照片'):''}<button onclick="saveExpenseEdit(${id})" class="w-full bg-skyBlue text-white font-bold py-2.5 rounded-xl">儲存修改</button>`;document.getElementById('global-modal').classList.remove('hidden');hydrateMediaImages(document.getElementById('modal-form-body'));
     }
-    function saveExpenseEdit(id){const item=expenses.find(x=>x.id===id);if(!item)return;item.note=document.getElementById('edit-exp-note').value;item.amount=Number(document.getElementById('edit-exp-amount').value)||0;item.currency=document.getElementById('edit-exp-curr').value;item.payMethod=document.getElementById('edit-exp-pay').value;item.category=document.getElementById('edit-exp-cat').value;saveExpenses();renderExpenses();closeGlobalModal();}
+    function saveExpenseEdit(id){const item=expenses.find(x=>x.id===id);if(!item)return;item.note=document.getElementById('edit-exp-note').value;item.amount=Number(document.getElementById('edit-exp-amount').value)||0;item.currency=document.getElementById('edit-exp-curr').value;item.payMethod=document.getElementById('edit-exp-pay').value;item.category=document.getElementById('edit-exp-cat').value;item.splitWith=selectedSplitMemberIds();const date=document.getElementById('edit-exp-date')?.value||localDateInputValue(),oldTime=expenseTimeOnly(item)||localTimeHHMM();item.time=`${date.replaceAll('-','/')} ${oldTime}`;saveExpenses();renderExpenses();closeGlobalModal();}
     async function deleteExpense(id){if(confirm('確定刪除此筆支出嗎？')){const item=expenses.find(e=>e.id===id);if(item?.receiptImage)await deleteMediaRef(item.receiptImage);expenses=expenses.filter(e=>e.id!==id);saveExpenses();renderExpenses();}}
     renderExpenses();
 
@@ -1786,7 +2033,7 @@
         id,
         note:finalTitle,
         amount:Number(amount)||0,
-        currency:'JPY',
+        currency:foreignCurrency(),
         category:finalCategory,
         payMethod:'現金',
         time:new Date().toLocaleString('zh-TW',{hour12:false}),
@@ -1807,7 +2054,7 @@
         ? candidates.map((c,i)=>`
           <button type="button" onclick="document.getElementById('ocr-final-amount').value='${c.value}';document.querySelectorAll('.ocr-candidate-btn').forEach(x=>x.classList.remove('ring-2','ring-skyBlue'));this.classList.add('ring-2','ring-skyBlue')" class="ocr-candidate-btn w-full flex items-center justify-between p-3 rounded-xl border border-sand bg-paper text-left ${i===0?'ring-2 ring-skyBlue':''}">
             <span class="text-gray-500">候選 ${i+1}</span>
-            <span class="font-bold text-wood text-base">¥${c.value.toLocaleString()}</span>
+            <span class="font-bold text-wood text-base">${foreignCurrency()} ${c.value.toLocaleString()}</span>
           </button>`).join('')
         : '<div class="p-3 rounded-xl bg-amber-50 text-amber-700 text-xs">沒有找到可靠金額，請直接手動輸入。</div>';
 
@@ -1832,7 +2079,7 @@
             </select>
           </div>
           <div>
-            <label class="block text-[10px] text-gray-400 mb-1">確認金額（JPY）</label>
+            <label class="block text-[10px] text-gray-400 mb-1">確認金額（${foreignCurrency()}）</label>
             <input id="ocr-final-amount" type="number" inputmode="numeric" value="${best}" placeholder="例如 1280" class="w-full p-3 bg-paper rounded-xl border border-sand font-bold text-base">
           </div>
         </div>
@@ -1936,7 +2183,7 @@
         filters.innerHTML=`<div class="text-[10px] font-bold text-gray-400">購物清單分類</div><div class="flex gap-2 overflow-x-auto no-scrollbar">${['全部','藥品','伴手禮','美食','超商','其他'].map(c=>`<button onclick="setShoppingListFilter('${c}')" class="px-3 py-1.5 rounded-xl text-[10px] font-bold border ${shoppingListFilter===c?'bg-skyBlue text-white border-skyBlue':'bg-card text-wood border-sand'}">${c}</button>`).join('')}</div>`;area.appendChild(filters);
         const items=shopData['購物清單'].map((item,idx)=>({item,idx})).filter(x=>shoppingListFilter==='全部'||x.item.category===shoppingListFilter);
         if(!items.length){area.insertAdjacentHTML('beforeend','<div class="text-center text-xs text-gray-400 py-6">此分類目前沒有商品</div>');return;}
-        items.forEach(({item,idx})=>{const div=document.createElement('div');div.className='flex justify-between items-center p-3 bg-card rounded-2xl border border-sand shadow-soft text-xs';div.innerHTML=`<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" ${item.checked?'checked':''} onchange="shopData['購物清單'][${idx}].checked=this.checked;saveShop();renderShopContent()" class="accent-skyBlue w-4 h-4 rounded"><span class="${item.checked?'line-through text-gray-400':'text-wood font-bold'}">${item.name}</span><span class="text-[9px] px-1.5 py-0.5 rounded bg-paper border border-sand">${item.category||'其他'}</span></label><button onclick="shopData['購物清單'].splice(${idx},1);saveShop();renderShopContent();" class="text-gray-300 hover:text-red-500"><i class="fa-solid fa-trash"></i></button>`;area.appendChild(div);});
+        items.forEach(({item,idx})=>{const div=document.createElement('div');div.className='flex justify-between items-center gap-2 p-3 bg-card rounded-2xl border border-sand shadow-soft text-xs';div.innerHTML=`<label class="flex items-center gap-2 cursor-pointer min-w-0 flex-1"><input type="checkbox" ${item.checked?'checked':''} onchange="shopData['購物清單'][${idx}].checked=this.checked;saveShop();renderShopContent()" class="accent-skyBlue w-4 h-4 rounded shrink-0"><span class="truncate ${item.checked?'line-through text-gray-400':'text-wood font-bold'}">${escapeHtml(item.name)}</span><span class="text-[9px] px-1.5 py-0.5 rounded bg-paper border border-sand shrink-0">${escapeHtml(item.category||'其他')}</span></label><div class="flex gap-2 shrink-0"><button onclick="editShoppingListItem(${idx})" class="text-skyBlue" title="編輯"><i class="fa-solid fa-pen"></i></button><button onclick="shopData['購物清單'].splice(${idx},1);saveShop();renderShopContent();" class="text-red-300" title="刪除"><i class="fa-solid fa-trash"></i></button></div>`;area.appendChild(div);});
       } else {
         (shopData[activeShopTab]||[]).forEach((item,idx)=>{
           const id=`shop-detail-${activeShopTab}-${idx}`.replace(/[^a-zA-Z0-9_-]/g,'_');
@@ -1951,6 +2198,10 @@
             <div class="text-[11px] text-gray-600 leading-relaxed"><span class="font-bold text-wood">簡介：</span>${item.note||'尚無簡介'}</div>
             ${loc}
             ${activeShopTab==='美食' && item.location?`<a target="_blank" href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}" class="block text-center p-2 rounded-xl bg-skyLight text-skyBlue font-bold"><i class="fa-solid fa-map-location-dot mr-1"></i>Google Maps</a>`:''}
+            <div class="grid grid-cols-2 gap-2">
+              <button type="button" class="edit-shop-btn p-2 rounded-xl bg-skyLight text-skyBlue font-bold btn-press"><i class="fa-solid fa-pen mr-1"></i>編輯</button>
+              <button type="button" class="delete-shop-btn p-2 rounded-xl bg-red-50 text-red-400 font-bold btn-press"><i class="fa-solid fa-trash mr-1"></i>刪除</button>
+            </div>
             <div class="flex items-center gap-2">
               <label class="flex-1 p-2 text-center rounded-xl bg-paper border border-dashed border-sand cursor-pointer"><i class="fa-solid fa-image text-amber-500 mr-1"></i>更換圖片<input type="file" accept="image/*" class="hidden" onchange="uploadShopImage('${activeShopTab}',${idx},this)"></label>
               <button type="button" title="加入購物清單" aria-label="加入購物清單" class="add-shop-btn w-11 h-10 rounded-xl bg-sakuraLight text-torii font-bold text-base btn-press"><i class="fa-solid fa-plus"></i></button>
@@ -1969,6 +2220,8 @@
             }
           });
           card.querySelector('.add-shop-btn').addEventListener('click',(e)=>{e.stopPropagation();addToShoppingList(item.name,activeShopTab);});
+          card.querySelector('.edit-shop-btn').addEventListener('click',(e)=>{e.stopPropagation();openShopEditModal(activeShopTab,idx);});
+          card.querySelector('.delete-shop-btn').addEventListener('click',(e)=>{e.stopPropagation();deleteShopRecommendation(activeShopTab,idx);});
           area.appendChild(card);
         });
         hydrateMediaImages(area);
@@ -1999,7 +2252,35 @@
       }else img.src=getShopFallbackImageUrl(name);
     }
     async function uploadShopImage(cat,idx,input){const file=input.files?.[0];if(!file)return;try{const data=await compressReceipt(file,800,.72);const old=shopData[cat][idx].image||'';shopData[cat][idx].image=await putMediaDataURL(data,'shop',isMediaRef(old)?old:'');saveShop();renderShopContent();}catch(e){console.error(e);alert('圖片讀取失敗');}finally{input.value='';}}
+    function openShopEditModal(cat,idx){
+      const item=shopData?.[cat]?.[idx];if(!item)return;
+      document.getElementById('modal-title').innerHTML='<span><i class="fa-solid fa-pen-to-square text-skyBlue mr-2"></i>編輯必買推薦</span>';
+      document.getElementById('modal-form-body').innerHTML=`
+        <input id="edit-shop-name" value="${escapeHtml(item.name||'')}" placeholder="品項名稱 *" class="w-full p-2.5 bg-paper rounded-xl border border-sand">
+        <textarea id="edit-shop-note" placeholder="簡介／備註" class="w-full p-2.5 bg-paper rounded-xl border border-sand h-24">${escapeHtml(item.note||'')}</textarea>
+        <input id="edit-shop-location" value="${escapeHtml(item.location||'')}" placeholder="購買地點（選填）" class="w-full p-2.5 bg-paper rounded-xl border border-sand">
+        <input id="edit-shop-wiki" value="${escapeHtml(item.wiki||'')}" placeholder="圖片搜尋關鍵字（選填）" class="w-full p-2.5 bg-paper rounded-xl border border-sand">
+        <button type="button" onclick="saveShopRecommendationEdit('${cat}',${idx})" class="w-full py-2.5 rounded-xl bg-skyBlue text-white font-bold btn-press">儲存修改</button>`;
+      document.getElementById('global-modal').classList.remove('hidden');
+    }
+    function saveShopRecommendationEdit(cat,idx){
+      const item=shopData?.[cat]?.[idx];if(!item)return;
+      const name=document.getElementById('edit-shop-name')?.value.trim();if(!name)return alert('請輸入品項名稱');
+      item.name=name;item.note=document.getElementById('edit-shop-note')?.value.trim()||'';item.location=document.getElementById('edit-shop-location')?.value.trim()||'';item.wiki=document.getElementById('edit-shop-wiki')?.value.trim()||'';
+      saveShop();renderShopContent();closeGlobalModal();
+    }
+    async function deleteShopRecommendation(cat,idx){
+      const item=shopData?.[cat]?.[idx];if(!item||!confirm(`確定刪除「${item.name||'此品項'}」？`))return;
+      if(item.image)await deleteMediaRef(item.image);shopData[cat].splice(idx,1);saveShop();renderShopContent();
+    }
     function addToShoppingList(name,category='其他'){shopData['購物清單'].push({name,checked:false,category});saveShop();alert(`已將「${name}」加入購物清單！`);}
+    function editShoppingListItem(idx){
+      const item=shopData['購物清單']?.[idx];if(!item)return;
+      document.getElementById('modal-title').innerText='編輯購物清單';
+      document.getElementById('modal-form-body').innerHTML=`<input id="edit-list-name" value="${escapeHtml(item.name||'')}" class="w-full p-2.5 bg-paper rounded-xl border border-sand" placeholder="品項名稱"><select id="edit-list-cat" class="w-full p-2.5 bg-paper rounded-xl border border-sand">${['藥品','伴手禮','美食','超商','其他'].map(c=>`<option ${c===(item.category||'其他')?'selected':''}>${c}</option>`).join('')}</select><button type="button" onclick="saveShoppingListItem(${idx})" class="w-full py-2.5 bg-skyBlue text-white rounded-xl font-bold">儲存修改</button>`;
+      document.getElementById('global-modal').classList.remove('hidden');
+    }
+    function saveShoppingListItem(idx){const item=shopData['購物清單']?.[idx];if(!item)return;const n=document.getElementById('edit-list-name')?.value.trim();if(!n)return alert('請輸入品項名稱');item.name=n;item.category=document.getElementById('edit-list-cat')?.value||'其他';saveShop();renderShopContent();closeGlobalModal();}
     renderShopContent();
 
     // ---------------- 日誌 (圖片顯示在文字下方) ----------------
@@ -2125,8 +2406,8 @@
 
     // ---------------- 工具計算器 ----------------
     function calcToolExchange() {
-      const jpy = parseFloat(document.getElementById('tool-jpy-input').value) || 0;
-      document.getElementById('tool-ntd-result').innerText = `約 NT$${Math.round(jpy * currentExchangeRate).toLocaleString()}`;
+      const foreign = parseFloat(document.getElementById('tool-jpy-input').value) || 0;
+      document.getElementById('tool-ntd-result').innerText = `約 ${baseCurrency()} ${Math.round(foreign * currentExchangeRate).toLocaleString()}`;
     }
 
     function calcAASplit() {
@@ -2134,15 +2415,34 @@
       const people = parseInt(document.getElementById('aa-people').value) || 1;
       const perJpy = Math.round(amt / people);
       const res = document.getElementById('aa-result');
-      res.innerText = `每人平均: ¥${perJpy.toLocaleString()} (約 NT$${Math.round(perJpy * currentExchangeRate)})`;
+      res.innerText = `每人平均: ${foreignCurrency()} ${perJpy.toLocaleString()} (約 ${baseCurrency()} ${Math.round(perJpy * currentExchangeRate)})`;
       res.classList.remove('hidden');
     }
 
     const weatherLocations={
       '東京':{lat:35.6762,lon:139.6503,timezone:'Asia/Tokyo'},
       '河口湖':{lat:35.5010,lon:138.7550,timezone:'Asia/Tokyo'},
-      '千葉':{lat:35.6329,lon:139.8804,timezone:'Asia/Tokyo'}
+      '千葉':{lat:35.6329,lon:139.8804,timezone:'Asia/Tokyo'},
+      '台南':{lat:22.9997,lon:120.2270,timezone:'Asia/Taipei'},'臺南':{lat:22.9997,lon:120.2270,timezone:'Asia/Taipei'},
+      '台北':{lat:25.0330,lon:121.5654,timezone:'Asia/Taipei'},'臺北':{lat:25.0330,lon:121.5654,timezone:'Asia/Taipei'},
+      '台中':{lat:24.1477,lon:120.6736,timezone:'Asia/Taipei'},'臺中':{lat:24.1477,lon:120.6736,timezone:'Asia/Taipei'},
+      '高雄':{lat:22.6273,lon:120.3014,timezone:'Asia/Taipei'},'桃園':{lat:24.9937,lon:121.3010,timezone:'Asia/Taipei'},
+      '新竹':{lat:24.8138,lon:120.9675,timezone:'Asia/Taipei'},'基隆':{lat:25.1276,lon:121.7392,timezone:'Asia/Taipei'},
+      '嘉義':{lat:23.4801,lon:120.4491,timezone:'Asia/Taipei'},
+      '紐約':{lat:40.7128,lon:-74.0060,timezone:'America/New_York'},'New York':{lat:40.7128,lon:-74.0060,timezone:'America/New_York'}
     };
+    let weatherRequestSeq=0;
+    let dailyWeatherRequestSeq=0;
+    function weatherCacheKey(prefix,city){return `${prefix}-${encodeURIComponent((tripConfig.country||'')+'|'+city)}`;}
+    function countryTokens(country=''){
+      const c=String(country).trim().toLowerCase(),map={
+        '台灣':['taiwan','台灣','臺灣','中華民國'],'臺灣':['taiwan','台灣','臺灣','中華民國'],'taiwan':['taiwan','台灣','臺灣'],
+        '日本':['japan','日本'],'japan':['japan','日本'],
+        '美國':['united states','usa','u.s.','美國'],'美利堅合眾國':['united states','usa','美國'],'usa':['united states','usa'],'united states':['united states','usa'],
+        '韓國':['south korea','republic of korea','韓國'],'南韓':['south korea','republic of korea','韓國']
+      };
+      return map[c]||[c].filter(Boolean);
+    }
     function weatherCodeText(code){
       const map={0:'晴朗',1:'大致晴朗',2:'局部多雲',3:'陰天',45:'有霧',48:'霧淞',51:'毛毛雨',53:'毛毛雨',55:'較強毛毛雨',61:'小雨',63:'中雨',65:'大雨',66:'凍雨',67:'強凍雨',71:'小雪',73:'中雪',75:'大雪',77:'霰',80:'陣雨',81:'較強陣雨',82:'強陣雨',85:'陣雪',86:'強陣雪',95:'雷雨',96:'雷雨伴冰雹',99:'強雷雨伴冰雹'};
       return map[code]||'天氣變化';
@@ -2160,13 +2460,22 @@
     }
     async function geocodeWeatherCity(city){
       if(weatherLocations[city])return weatherLocations[city];
-      const key='v15-weather-geo-'+city;
-      try{const c=JSON.parse(localStorage.getItem(key)||'null');if(c?.lat)return c}catch(e){}
-      const url=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=5&language=zh&format=json`;
-      const data=await fetch(url,{cache:'no-store'}).then(r=>r.json()),arr=data.results||[];
-      let x=arr[0];if(tripConfig.country)x=arr.find(v=>String(v.country||'').includes(tripConfig.country))||x;
-      if(!x)throw new Error('找不到城市');
-      const out={lat:x.latitude,lon:x.longitude,timezone:x.timezone||'auto'};weatherLocations[city]=out;localStorage.setItem(key,JSON.stringify(out));return out;
+      const key=weatherCacheKey('v16-weather-geo',city);
+      try{const c=JSON.parse(localStorage.getItem(key)||'null');if(c?.lat&&c?.lon&&Date.now()-(c._savedAt||0)<30*86400000)return c}catch(e){}
+      const url=`https://geocoding-api.open-meteo.com/v1/search?name=${encodeURIComponent(city)}&count=10&language=zh&format=json`;
+      const data=await fetch(url,{cache:'no-store'}).then(r=>{if(!r.ok)throw new Error('geocode');return r.json()}),arr=data.results||[];
+      const tokens=countryTokens(tripConfig.country);
+      const norm=v=>String(v||'').toLowerCase().replace(/臺/g,'台').replace(/\s+/g,'');
+      const cityN=norm(city);
+      const scored=arr.map((v,i)=>{
+        const country=norm(v.country),name=norm(v.name),admin1=norm(v.admin1),admin2=norm(v.admin2);
+        let score=100-i;if(name===cityN)score+=80;else if(name.includes(cityN)||cityN.includes(name))score+=35;
+        if(admin1.includes(cityN)||admin2.includes(cityN))score+=25;
+        if(tokens.some(t=>country.includes(norm(t))))score+=120;
+        return {v,score};
+      }).sort((a,b)=>b.score-a.score);
+      const x=scored[0]?.v;if(!x)throw new Error('找不到城市');
+      const out={lat:x.latitude,lon:x.longitude,timezone:x.timezone||'auto',name:x.name||city,country:x.country||'',_savedAt:Date.now()};weatherLocations[city]=out;localStorage.setItem(key,JSON.stringify(out));return out;
     }
     function renderWeather(city,data,fromCache=false){
       const cur=data.current||{}, hourly=data.hourly||{};
@@ -2179,51 +2488,84 @@
       const temp=document.getElementById('weather-temp'),cond=document.getElementById('weather-condition'),detail=document.getElementById('weather-detail'),upd=document.getElementById('weather-updated');
       if(temp)temp.innerText=Number.isFinite(cur.temperature_2m)?`${Math.round(cur.temperature_2m)}°C`:'--°C';
       if(cond)cond.innerText=weatherCodeText(cur.weather_code);
-      if(detail)detail.innerText=`體感 ${Number.isFinite(cur.apparent_temperature)?Math.round(cur.apparent_temperature)+'°C':'--'}｜降雨機率 ${rain}%｜風速 ${Number.isFinite(cur.wind_speed_10m)?Math.round(cur.wind_speed_10m)+' km/h':'--'}`;
+      if(detail)detail.innerText=`體感 ${Number.isFinite(cur.apparent_temperature)?Math.round(cur.apparent_temperature)+'°C':'--'}｜降雨機率 ${rain}%｜濕度 ${Number.isFinite(cur.relative_humidity_2m)?Math.round(cur.relative_humidity_2m)+'%':'--'}｜風速 ${Number.isFinite(cur.wind_speed_10m)?Math.round(cur.wind_speed_10m)+' km/h':'--'}`;
       const stamp=new Date(data._savedAt||Date.now());
       if(upd)upd.innerText=`${fromCache?'離線顯示上次資料｜':''}更新 ${stamp.toLocaleString('zh-TW',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})}｜Open-Meteo`;
     }
     async function updateWeatherDisplay(force=false){
-      const city=document.getElementById('weather-city')?.value||tripConfig.city||'東京',key='v15-weather-current-'+city,cached=localStorage.getItem(key);
-      if(cached&&!force){try{renderWeather(city,JSON.parse(cached),true)}catch(e){}}
-      const detail=document.getElementById('weather-detail');if(detail)detail.innerText='正在取得即時天氣資料…';
+      const city=document.getElementById('weather-city')?.value||tripConfig.city||'東京',key=weatherCacheKey('v16-weather-current',city),cached=localStorage.getItem(key),seq=++weatherRequestSeq;
+      if(cached&&!force){try{const c=JSON.parse(cached);if(Date.now()-(c._savedAt||0)<20*60*1000)renderWeather(city,c,true)}catch(e){}}
+      const detail=document.getElementById('weather-detail');if(detail)detail.innerText='正在更新即時天氣…';
       try{
-        const loc=await geocodeWeatherCity(city);
-        const url=`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,apparent_temperature,weather_code,wind_speed_10m&hourly=precipitation_probability&forecast_days=1&timezone=${encodeURIComponent(loc.timezone||'auto')}`;
-        const res=await fetch(url,{cache:'no-store'});if(!res.ok)throw new Error('weather');
-        const data=await res.json();data._savedAt=Date.now();localStorage.setItem(key,JSON.stringify(data));renderWeather(city,data,false);
-      }catch(e){if(cached){try{renderWeather(city,JSON.parse(cached),true)}catch(_){}}}
+        const loc=await geocodeWeatherCity(city);if(seq!==weatherRequestSeq)return;
+        const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+        const url=`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,apparent_temperature,relative_humidity_2m,precipitation,rain,showers,weather_code,wind_speed_10m,wind_gusts_10m&hourly=precipitation_probability&forecast_days=1&timezone=${encodeURIComponent(loc.timezone||'auto')}`;
+        const res=await fetch(url,{cache:'no-store',signal:controller.signal});clearTimeout(timer);if(!res.ok)throw new Error('weather');
+        const data=await res.json();if(seq!==weatherRequestSeq||document.getElementById('weather-city')?.value!==city)return;
+        data._savedAt=Date.now();data._location=loc;localStorage.setItem(key,JSON.stringify(data));renderWeather(city,data,false);
+      }catch(e){if(seq===weatherRequestSeq&&cached){try{renderWeather(city,JSON.parse(cached),true)}catch(_){}}}
     }
     function scheduleDayIso(day){
       const year=(tripConfig.startDate||String(new Date().getFullYear())).slice(0,4),md=String(day?.date||'').split('/');
       return md.length===2?`${year}-${md[0].padStart(2,'0')}-${md[1].padStart(2,'0')}`:'';
     }
-    function currentScheduleCity(){
-      const day=daysData?.[currentDayIndex],counts={};
-      (day?.items||[]).forEach(x=>{const c=x.city||'';if(c)counts[c]=(counts[c]||0)+1});
-      return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0]?.[0]||tripConfig.city||'東京';
+    const scheduleWeatherRules=[
+      {city:'台南',re:/台南|臺南|Tainan/i},{city:'高雄',re:/高雄|Kaohsiung/i},{city:'台中',re:/台中|臺中|Taichung/i},{city:'台北',re:/台北|臺北|Taipei|士林|北投|信義區|西門町|中正紀念堂|101/i},{city:'新竹',re:/新竹|Hsinchu/i},{city:'桃園',re:/桃園|Taoyuan/i},{city:'嘉義',re:/嘉義|Chiayi/i},
+      {city:'河口湖',weight:70,re:/河口湖|富士河口湖|Kawaguchiko|Fujikawaguchiko|大石公園|新倉山淺間|富士急/i},
+      {city:'千葉',weight:75,re:/千葉|舞濱|舞浜|浦安|新浦安|成田|Narita|Tokyo Disney|Disneyland|DisneySea|迪士尼/i},
+      {city:'東京',re:/東京|Tokyo|新宿|澀谷|渋谷|淺草|浅草|上野|池袋|秋葉原|銀座|台場|豊洲|豐洲|六本木|原宿|羽田|東京車站|Skytree|Shinjuku|Shibuya|Asakusa|Ueno|Akihabara|Ginza|Odaiba/i},
+      {city:'大阪',re:/大阪|Osaka|梅田|難波|心齋橋|道頓堀/i},{city:'京都',re:/京都|Kyoto|清水寺|嵐山|伏見稻荷/i},{city:'名古屋',re:/名古屋|Nagoya/i},{city:'奈良',re:/奈良|Nara/i},{city:'福岡',re:/福岡|Fukuoka|博多|Hakata/i},{city:'札幌',re:/札幌|Sapporo/i},{city:'那霸',re:/那霸|那覇|Naha|沖繩|沖縄|Okinawa/i},
+      {city:'紐約',re:/紐約|纽约|New York|Manhattan|Brooklyn|Queens|Times Square|Central Park/i},{city:'洛杉磯',re:/洛杉磯|Los Angeles|Hollywood|Anaheim/i},{city:'舊金山',re:/舊金山|San Francisco/i}
+    ];
+    function inferScheduleWeatherTarget(day=daysData?.[currentDayIndex]){
+      const scores=new Map(),add=(city,pts)=>{if(city)scores.set(city,(scores.get(city)||0)+pts)};
+      const dayItems=(day===daysData?.[currentDayIndex]&&typeof visibleItems==='function'?visibleItems(currentDayIndex):(day?.items||[]));
+      dayItems.forEach((x,idx)=>{
+        if(x.city)add(String(x.city).trim(),120-(idx*2));
+        const text=[x.title,x.address].filter(Boolean).join(' ');
+        scheduleWeatherRules.forEach(r=>{if(r.re.test(text))add(r.city,(r.weight||50)-(idx*0.5))});
+      });
+      if(scores.size)return [...scores.entries()].sort((a,b)=>b[1]-a[1])[0][0];
+      return tripConfig.city||'東京';
+    }
+    function currentScheduleCity(){return inferScheduleWeatherTarget(daysData?.[currentDayIndex]);}
+    function syncWeatherToolToScheduleLocation(){
+      const sel=document.getElementById('weather-city'),city=currentScheduleCity();if(!sel||!city)return;
+      if(![...sel.options].some(o=>o.value===city)){const o=document.createElement('option');o.value=city;o.textContent=city;sel.prepend(o)}sel.value=city;
+    }
+    function isScheduleDateBeyondForecastRange(iso){
+      if(!iso)return false;
+      const now=new Date();now.setHours(0,0,0,0);
+      const target=new Date(`${iso}T12:00:00`);
+      if(Number.isNaN(target.getTime()))return false;
+      return Math.round((target-now)/86400000)>15;
     }
     async function updateDailyScheduleWeather(force=false){
       const box=document.getElementById('schedule-weather-card');if(!box)return;
-      const city=currentScheduleCity(),day=daysData?.[currentDayIndex],iso=scheduleDayIso(day),key=`v15-daily-weather-${city}-${iso}`,cached=localStorage.getItem(key);
-      document.getElementById('schedule-weather-city').textContent=city;
-      document.getElementById('schedule-weather-date').textContent=`${iso?iso.replaceAll('-','/'):''} 行程天氣`;
-      if(cached&&!force){
-        try{const c=JSON.parse(cached);document.getElementById('schedule-weather-temp').textContent=c.temp;document.getElementById('schedule-weather-detail').textContent=c.detail}catch(e){}
+      const city=currentScheduleCity(),day=daysData?.[currentDayIndex],iso=scheduleDayIso(day),key=weatherCacheKey('v18-daily-weather',`${city}|${iso}`),cached=localStorage.getItem(key),seq=++dailyWeatherRequestSeq;
+      const cityEl=document.getElementById('schedule-weather-city'),dateEl=document.getElementById('schedule-weather-date'),tempEl=document.getElementById('schedule-weather-temp'),detailEl=document.getElementById('schedule-weather-detail');
+      box.classList.remove('forecast-out-of-range');
+      if(cityEl)cityEl.textContent=city;if(dateEl)dateEl.textContent=`${iso?iso.replaceAll('-','/'):''} 行程天氣・依今日行程自動判定`;
+      if(isScheduleDateBeyondForecastRange(iso)){
+        box.classList.add('forecast-out-of-range');
+        if(tempEl)tempEl.textContent='';
+        if(detailEl)detailEl.textContent='未曾進入預報16日內。';
+        return;
       }
+      if(cached&&!force){try{const c=JSON.parse(cached);if(tempEl)tempEl.textContent=c.temp;if(detailEl)detailEl.textContent=c.detail;if(Date.now()-(c.at||0)<10*60*1000)return}catch(e){}}
+      if(detailEl)detailEl.textContent=`正在定位 ${city} 並更新天氣…`;
       try{
-        const loc=await geocodeWeatherCity(city);
-        const url=`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=16&timezone=${encodeURIComponent(loc.timezone||'auto')}`;
-        const d=await fetch(url,{cache:'no-store'}).then(r=>r.json()),idx=(d.daily?.time||[]).indexOf(iso);
-        let temp,detail;
-        if(idx>=0){temp=`${Math.round(d.daily.temperature_2m_min[idx])}–${Math.round(d.daily.temperature_2m_max[idx])}°C`;detail=`${weatherCodeText(d.daily.weather_code[idx])}・降雨 ${d.daily.precipitation_probability_max[idx]??'--'}%`}
-        else{temp=`${Math.round(d.current?.temperature_2m??0)}°C`;detail=`${weatherCodeText(d.current?.weather_code)}・尚未進入行程日期預報範圍`}
-        document.getElementById('schedule-weather-temp').textContent=temp;document.getElementById('schedule-weather-detail').textContent=detail;
-        localStorage.setItem(key,JSON.stringify({temp,detail,at:Date.now()}));
-      }catch(e){
-        if(!cached){document.getElementById('schedule-weather-temp').textContent='--°C';document.getElementById('schedule-weather-detail').textContent='離線／暫無天氣資料'}
-      }
+        const loc=await geocodeWeatherCity(city);if(seq!==dailyWeatherRequestSeq)return;
+        const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
+        const url=`https://api.open-meteo.com/v1/forecast?latitude=${loc.lat}&longitude=${loc.lon}&current=temperature_2m,apparent_temperature,weather_code,relative_humidity_2m,wind_speed_10m&daily=weather_code,temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=16&timezone=${encodeURIComponent(loc.timezone||'auto')}`;
+        const res=await fetch(url,{cache:'no-store',signal:controller.signal});clearTimeout(timer);if(!res.ok)throw new Error('weather');const d=await res.json();if(seq!==dailyWeatherRequestSeq)return;
+        const idx=(d.daily?.time||[]).indexOf(iso);let temp,detail;
+        if(idx>=0){temp=`${Math.round(d.daily.temperature_2m_min[idx])}–${Math.round(d.daily.temperature_2m_max[idx])}°C`;detail=`${weatherCodeText(d.daily.weather_code[idx])}・降雨 ${d.daily.precipitation_probability_max[idx]??'--'}%・${loc.name||city}`;}
+        else{const cur=d.current||{};temp=Number.isFinite(cur.temperature_2m)?`目前 ${Math.round(cur.temperature_2m)}°C`:'--°C';detail=`行程日期尚未進入 16 天預報｜${weatherCodeText(cur.weather_code)}・體感 ${Number.isFinite(cur.apparent_temperature)?Math.round(cur.apparent_temperature)+'°C':'--'}・濕度 ${Number.isFinite(cur.relative_humidity_2m)?Math.round(cur.relative_humidity_2m)+'%':'--'}・${loc.name||city}`;}
+        if(tempEl)tempEl.textContent=temp;if(detailEl)detailEl.textContent=detail;localStorage.setItem(key,JSON.stringify({temp,detail,at:Date.now(),city,iso}));
+      }catch(e){if(cached){try{const c=JSON.parse(cached);if(tempEl)tempEl.textContent=c.temp;if(detailEl)detailEl.textContent='離線顯示上次資料｜'+c.detail}catch(_){}}else{if(tempEl)tempEl.textContent='--°C';if(detailEl)detailEl.textContent='離線／暫無天氣資料';}}
     }
+
 
 
     // ---------------- 頂部地圖、優惠券、備選景點 ----------------
@@ -2350,7 +2692,9 @@
       renderBookingPdfs();
     }
 
-    document.addEventListener('DOMContentLoaded',()=>{initBookingPdfUpload();applyTripConfigUI();populateWeatherCities();updateWeatherDisplay(false);setTimeout(()=>{migrateLegacyMediaToIndexedDB();updateDailyScheduleWeather(false);},400);});
+    document.addEventListener('DOMContentLoaded',()=>{renderBookingsForTrip();initBookingPdfUpload();applyTripConfigUI();applyCurrencyUI();populateWeatherCities();updateWeatherDisplay(false);setTimeout(()=>{migrateLegacyMediaToIndexedDB();updateDailyScheduleWeather(false);},400);});
+    setInterval(()=>{if(document.visibilityState!=='visible'||tripTransitioning)return;if(activeTab==='tools'){syncWeatherToolToScheduleLocation();updateWeatherDisplay(true)}if(activeTab==='schedule')updateDailyScheduleWeather(true);},3*60*1000);
+    document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&!tripTransitioning){if(activeTab==='tools'){syncWeatherToolToScheduleLocation();updateWeatherDisplay(true)}if(activeTab==='schedule')updateDailyScheduleWeather(true);}});
 
     const defaultCoupons = [
       {name:"松本清",note:'點圖片可放大查看優惠券',image:"./images/coupons/coupon_01.webp"},
@@ -2475,11 +2819,12 @@
       const titleEl = document.getElementById('modal-title');
       const bodyEl = document.getElementById('modal-form-body');
 
-      if (activeTab === 'schedule') {
+      if (activeTab === 'bookings') { closeGlobalModal(); openBookingEditor('flight'); return;
+      } else if (activeTab === 'schedule') {
         titleEl.innerHTML = `<div class="flex items-center gap-2"><span class="px-2.5 py-1 rounded-lg bg-skyBlue text-white">新增景點</span><button type="button" onclick="closeGlobalModal();openCandidateModal()" class="px-2.5 py-1 rounded-lg bg-paper border border-sand text-skyBlue btn-press">備選景點</button></div>`;
         bodyEl.innerHTML = `
           <input type="text" id="m-title" placeholder="景點名稱" class="w-full p-2.5 bg-paper rounded-xl border border-sand">
-          <div><label class="block text-[10px] text-gray-400 mb-1">時間</label><select id="m-time" class="w-full p-2.5 bg-paper rounded-xl border border-sand font-bold text-wood">${halfHourTimeOptions()}</select></div>
+          <div class="mobile-form-grid two"><div><label class="block text-[10px] text-gray-400 mb-1">時間</label><select id="m-time" class="w-full p-2.5 bg-paper rounded-xl border border-sand font-bold text-wood">${halfHourTimeOptions()}</select></div><div><label class="block text-[10px] text-gray-400 mb-1">城市／地區（天氣用，可留空）</label><input id="m-city" value="" placeholder="自動判斷；需要時填台南／紐約／河口湖" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div></div>
           <div class="text-[9px] text-gray-400">將直接加入目前停留的 ${daysData[currentDayIndex].date}（${daysData[currentDayIndex].w}）；如要完整照片、地圖與介紹，請使用「備選景點」。</div>
           <button type="button" onclick="submitNewSchedule()" class="w-full bg-skyBlue text-white font-bold py-2.5 rounded-xl btn-press">加入行程</button>
         `;
@@ -2487,12 +2832,10 @@
         titleEl.innerText = '新增記帳項目';
         bodyEl.innerHTML = `
           <input type="text" id="m-exp-note" placeholder="項目名稱 (例: 拉麵)" class="w-full p-2.5 bg-paper rounded-xl border border-sand">
+          <div><label class="block text-[10px] text-gray-400 mb-1">消費日期（預設手機日期）</label><input type="date" id="m-exp-date" value="${localDateInputValue()}" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div>
           <div class="grid grid-cols-2 gap-2">
             <input type="number" id="m-exp-amount" placeholder="金額" class="w-full p-2.5 bg-paper rounded-xl border border-sand">
-            <select id="m-exp-curr" class="w-full p-2.5 bg-paper rounded-xl border border-sand font-bold text-wood">
-              <option value="JPY">日幣 JPY</option>
-              <option value="NTD">台幣 NTD</option>
-            </select>
+            <select id="m-exp-curr" class="w-full p-2.5 bg-paper rounded-xl border border-sand font-bold text-wood">${expenseCurrencyOptions(foreignCurrency())}</select>
           </div>
           <div class="grid grid-cols-2 gap-2">
             <select id="m-exp-pay" class="w-full p-2 bg-paper rounded-xl border border-sand font-bold text-wood">
@@ -2509,6 +2852,7 @@
               <option value="其他">其他</option>
             </select>
           </div>
+          ${splitMemberPickerHtml([])}
           
           <div class="flex gap-2 pt-1">
             <label class="flex-1 p-2 bg-paper border border-dashed border-sand rounded-xl text-center cursor-pointer btn-press">
@@ -2561,14 +2905,15 @@
       const title=document.getElementById('m-title')?.value?.trim();const time=document.getElementById('m-time')?.value;
       if(!title)return alert('請輸入景點名稱');if(!time)return alert('請選擇時間');
       const dayIdx=currentDayIndex;
-      daysData[dayIdx].items.push({id:'item-'+Date.now(),time,title,type:'',tagClass:'',group:'',address:title,note:'',intro:''});
+      const city=document.getElementById('m-city')?.value?.trim()||'';
+      daysData[dayIdx].items.push({id:'item-'+Date.now(),time,title,type:'',tagClass:'',group:'',address:title,city,note:'',intro:''});
       daysData[dayIdx].items.sort((a,b)=>a.time.localeCompare(b.time));saveDays();renderTimeline(dayIdx);closeGlobalModal();
     }
 
     async function submitNewExpense() {
-      const note=document.getElementById('m-exp-note').value;const amount=document.getElementById('m-exp-amount').value;const currency=document.getElementById('m-exp-curr').value;const payMethod=document.getElementById('m-exp-pay').value;const category=document.getElementById('m-exp-cat').value;
+      const note=document.getElementById('m-exp-note').value;const amount=document.getElementById('m-exp-amount').value;const currency=document.getElementById('m-exp-curr').value;const payMethod=document.getElementById('m-exp-pay').value;const category=document.getElementById('m-exp-cat').value;const splitWith=selectedSplitMemberIds();const date=document.getElementById('m-exp-date')?.value||localDateInputValue();
       if(!note||!amount)return alert('請完整輸入名稱與金額');let file=document.getElementById('m-exp-img-camera')?.files[0]||document.getElementById('m-exp-img-gallery')?.files[0];let receiptImage='';if(file){try{receiptImage=await compressReceipt(file)}catch(e){}}
-      expenses.unshift({id:Date.now(),note,amount:Number(amount),currency,category,payMethod,time:new Date().toLocaleString('zh-TW',{hour12:false}),receiptImage});saveExpenses();renderExpenses();closeGlobalModal();
+      expenses.unshift({id:Date.now(),note,amount:Number(amount),currency,category,payMethod,splitWith,time:`${date.replaceAll('-','/')} ${localTimeHHMM()}`,receiptImage});saveExpenses();renderExpenses();closeGlobalModal();
     }
 
     async function submitNewShopItem(){
@@ -2721,7 +3066,7 @@
     function blobToDataURL(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.readAsDataURL(blob)})}
     function dataURLToBlob(dataURL){const [meta,data]=String(dataURL).split(',');const mime=(meta.match(/data:([^;]+)/)||[])[1]||'application/octet-stream';const bin=atob(data||'');const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new Blob([bytes],{type:mime})}
     async function clearBookingCredentialStore(){try{const db=await openBookingPdfDB();await new Promise((resolve,reject)=>{const tx=db.transaction(BOOKING_PDF_STORE,'readwrite');tx.objectStore(BOOKING_PDF_STORE).clear();tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}catch(e){}}
-    const APP_EXACT_KEYS=['tokyo-days-v2','tokyo-expenses-v2','tokyo-rate-v2','tokyo-budget-v2','tokyo-shop-v2','tokyo-journals-v2','tokyo-plan-v2'];
+    const APP_EXACT_KEYS=['tokyo-days-v2','tokyo-expenses-v2','tokyo-expense-split-members-v1','tokyo-rate-v2','tokyo-budget-v2','tokyo-shop-v2','tokyo-journals-v2','tokyo-plan-v2'];
     function isTokyoAppKey(k){return APP_EXACT_KEYS.includes(k)||k.startsWith('note-')||k.startsWith('tokyo-weather-');}
     function collectAppLocalStorage(){
       const out={};
@@ -2833,25 +3178,33 @@
       document.getElementById('modal-title').innerText='建立新旅程';
       document.getElementById('modal-form-body').innerHTML=`
         <input id="new-trip-title" placeholder="旅程名稱 *" class="w-full p-2.5 bg-paper rounded-xl border border-sand">
-        <div class="grid grid-cols-2 gap-2"><input id="new-trip-country" placeholder="國家" class="w-full p-2.5 bg-paper rounded-xl border border-sand"><input id="new-trip-city" placeholder="主要城市 *" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div>
-        <div class="grid grid-cols-2 gap-2"><div><label class="block text-[10px] text-gray-400 mb-1">出發日期</label><input id="new-trip-start" type="date" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div><div><label class="block text-[10px] text-gray-400 mb-1">回程日期</label><input id="new-trip-end" type="date" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div></div>
+        <div class="mobile-form-grid two"><input id="new-trip-country" placeholder="國家" class="w-full p-2.5 bg-paper rounded-xl border border-sand"><input id="new-trip-city" placeholder="主要城市 *" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div>
+        <div class="mobile-form-grid two"><div><label class="block text-[10px] text-gray-400 mb-1">出發日期</label><input id="new-trip-start" type="date" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div><div><label class="block text-[10px] text-gray-400 mb-1">回程日期</label><input id="new-trip-end" type="date" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div></div>
+        <div class="p-3 rounded-2xl bg-skyLight/60 border border-skyBlue/20 space-y-2">
+          <div class="font-bold text-xs text-wood"><i class="fa-solid fa-coins text-amber-500 mr-1"></i>記帳幣別與匯率</div>
+          <div class="mobile-form-grid two"><div><label class="block text-[10px] text-gray-400 mb-1">主要幣別</label><input id="new-trip-base-currency" value="NTD" maxlength="6" placeholder="例如 NTD" class="w-full p-2.5 bg-card rounded-xl border border-sand uppercase"></div><div><label class="block text-[10px] text-gray-400 mb-1">當地／外幣</label><input id="new-trip-foreign-currency" placeholder="例如 USD" maxlength="6" class="w-full p-2.5 bg-card rounded-xl border border-sand uppercase"></div></div>
+          <div><label class="block text-[10px] text-gray-400 mb-1">匯率（1 外幣可換多少主要幣別）</label><input id="new-trip-rate" type="number" inputmode="decimal" min="0" step="0.0001" placeholder="例如 USD → NTD 請填 32" class="w-full p-2.5 bg-card rounded-xl border border-sand"></div>
+        </div>
         <label class="block p-3 bg-paper border border-dashed border-sand rounded-xl text-center cursor-pointer"><i class="fa-solid fa-image text-amber-500 mr-1"></i>封面照片（選填）<input id="new-trip-cover" type="file" accept="image/*" class="hidden"></label>
         <button type="button" onclick="createManagedTrip()" class="w-full py-3 rounded-xl bg-skyBlue text-white font-bold">建立旅程</button>`;
       document.getElementById('global-modal').classList.remove('hidden');
     }
     async function createManagedTrip(){
-      const title=document.getElementById('new-trip-title').value.trim(),country=document.getElementById('new-trip-country').value.trim(),city=document.getElementById('new-trip-city').value.trim(),start=document.getElementById('new-trip-start').value,end=document.getElementById('new-trip-end').value;
+      const title=document.getElementById('new-trip-title').value.trim(),country=document.getElementById('new-trip-country').value.trim(),city=document.getElementById('new-trip-city').value.trim(),start=document.getElementById('new-trip-start').value,end=document.getElementById('new-trip-end').value,baseCurr=(document.getElementById('new-trip-base-currency').value.trim()||'NTD').toUpperCase(),foreignCurr=document.getElementById('new-trip-foreign-currency').value.trim().toUpperCase(),rate=Number(document.getElementById('new-trip-rate').value);
       if(!title||!city||!start||!end)return alert('請填寫旅程名稱、主要城市與日期');
+      if(!foreignCurr||!Number.isFinite(rate)||rate<=0)return alert('請填寫當地／外幣代碼與有效匯率');
       if(end<start)return alert('回程日期不可早於出發日期');
       persistActiveTripSnapshot();
-      const id='trip-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),cfg={...defaultTripConfig,title,headerTitle:title,emoji:'✈️',country,city,startDate:start,endDate:end,cover:'./cover.jpg',showManual:false,manualUrl:'',showMap:true,mapUrl:'',showCoupons:false,autoImages:true};
+      const id='trip-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),cfg={...defaultTripConfig,title,headerTitle:title,emoji:'✈️',country,city,startDate:start,endDate:end,cover:'./cover.jpg',showManual:false,manualUrl:'',showMap:true,mapUrl:'',showCoupons:false,autoImages:true,baseCurrency:baseCurr,foreignCurrency:foreignCurr,exchangeRate:rate};
       const f=document.getElementById('new-trip-cover')?.files?.[0];if(f){try{cfg.cover=await putMediaDataURL(await compressReceipt(f,1200,.8),'cover')}catch(e){}}
-      const t={id,title,city,country,startDate:start,endDate:end,cover:cfg.cover,useTokyoSeed:false,snapshot:createBlankTripSnapshot(cfg)};
-      tripManagerState.trips.push(t);tripManagerState.activeId=id;saveTripManagerState();restoreTripSnapshot(t);location.reload();
+      const t={id,title,city,country,startDate:start,endDate:end,cover:cfg.cover,baseCurrency:baseCurr,foreignCurrency:foreignCurr,exchangeRate:rate,useTokyoSeed:false,snapshot:createBlankTripSnapshot(cfg)};
+      tripTransitioning=true;showTripSwitchOverlay(`正在建立「${title}」…`);tripManagerState.trips.push(t);restoreTripSnapshot(t);tripManagerState.activeId=id;saveTripManagerState();location.reload();
     }
     function switchManagedTrip(id){
       if(id===tripManagerState.activeId){closeTripManager();return}
-      persistActiveTripSnapshot();const t=tripManagerState.trips.find(x=>x.id===id);if(!t)return;tripManagerState.activeId=id;saveTripManagerState();restoreTripSnapshot(t);location.reload();
+      const t=tripManagerState.trips.find(x=>x.id===id);if(!t||tripTransitioning)return;
+      persistActiveTripSnapshot();tripTransitioning=true;showTripSwitchOverlay(`正在切換到「${t.title||'旅程'}」…`);
+      restoreTripSnapshot(t);tripManagerState.activeId=id;saveTripManagerState();location.reload();
     }
     function editManagedTrip(id){
       const t=tripManagerState.trips.find(x=>x.id===id);if(!t)return;
@@ -2862,15 +3215,16 @@
       if(tripManagerState.trips.length<=1)return;
       const t=tripManagerState.trips.find(x=>x.id===id);if(!t||!confirm(`確定刪除「${t.title}」？本裝置上的該旅程資料將移除。`))return;
       const wasActive=id===tripManagerState.activeId;tripManagerState.trips=tripManagerState.trips.filter(x=>x.id!==id);
-      if(wasActive){const n=tripManagerState.trips[0];tripManagerState.activeId=n.id;saveTripManagerState();restoreTripSnapshot(n);location.reload()}else{saveTripManagerState();renderTripManagerList()}
+      if(wasActive){const n=tripManagerState.trips[0];tripTransitioning=true;showTripSwitchOverlay(`正在切換到「${n.title||'旅程'}」…`);restoreTripSnapshot(n);tripManagerState.activeId=n.id;saveTripManagerState();location.reload()}else{saveTripManagerState();renderTripManagerList()}
     }
 
     function openTripSettings(){
       document.getElementById('modal-title').innerText='目前旅程設定';
       document.getElementById('modal-form-body').innerHTML=`
         <input id="v15-trip-title" value="${escapeHtml(tripConfig.title||'')}" placeholder="旅程名稱" class="w-full p-2.5 bg-paper rounded-xl border border-sand">
-        <div class="grid grid-cols-2 gap-2"><input id="v15-trip-country" value="${escapeHtml(tripConfig.country||'')}" placeholder="國家" class="w-full p-2.5 bg-paper rounded-xl border border-sand"><input id="v15-trip-city" value="${escapeHtml(tripConfig.city||'')}" placeholder="主要城市" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div>
-        <div class="grid grid-cols-2 gap-2"><div><label class="block text-[10px] text-gray-400 mb-1">出發日期</label><input id="v15-trip-start" type="date" value="${tripConfig.startDate||''}" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div><div><label class="block text-[10px] text-gray-400 mb-1">回程日期</label><input id="v15-trip-end" type="date" value="${tripConfig.endDate||''}" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div></div>
+        <div class="mobile-form-grid two"><input id="v15-trip-country" value="${escapeHtml(tripConfig.country||'')}" placeholder="國家" class="w-full p-2.5 bg-paper rounded-xl border border-sand"><input id="v15-trip-city" value="${escapeHtml(tripConfig.city||'')}" placeholder="主要城市" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div>
+        <div class="mobile-form-grid two"><div><label class="block text-[10px] text-gray-400 mb-1">出發日期</label><input id="v15-trip-start" type="date" value="${tripConfig.startDate||''}" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div><div><label class="block text-[10px] text-gray-400 mb-1">回程日期</label><input id="v15-trip-end" type="date" value="${tripConfig.endDate||''}" class="w-full p-2.5 bg-paper rounded-xl border border-sand"></div></div>
+        <div class="p-3 rounded-2xl bg-skyLight/60 border border-skyBlue/20 space-y-2"><div class="font-bold text-xs">記帳幣別與匯率</div><div class="mobile-form-grid two"><input id="v15-base-currency" value="${escapeHtml(baseCurrency())}" placeholder="主要幣別 NTD" class="w-full p-2.5 bg-card rounded-xl border border-sand uppercase"><input id="v15-foreign-currency" value="${escapeHtml(foreignCurrency())}" placeholder="外幣 USD" class="w-full p-2.5 bg-card rounded-xl border border-sand uppercase"></div><input id="v15-exchange-rate" type="number" inputmode="decimal" step="0.0001" min="0" value="${currentExchangeRate}" placeholder="1 外幣 = ? 主要幣別" class="w-full p-2.5 bg-card rounded-xl border border-sand"></div>
         <label class="block p-3 bg-paper border border-dashed border-sand rounded-xl text-center cursor-pointer">更換封面（選填）<input id="v15-trip-cover" type="file" accept="image/*" class="hidden"></label>
         <label class="flex items-center gap-2 text-xs"><input id="v15-auto-images" type="checkbox" ${tripConfig.autoImages!==false?'checked':''}> 自動取得景點圖片（Wikipedia / Wikimedia）</label>
         <button type="button" onclick="saveTripSettings()" class="w-full bg-skyBlue text-white font-bold py-2.5 rounded-xl">儲存旅程設定</button>`;
@@ -2879,8 +3233,9 @@
     async function saveTripSettings(){
       const start=document.getElementById('v15-trip-start').value,end=document.getElementById('v15-trip-end').value;if(start&&end&&end<start)return alert('回程日期不可早於出發日期');
       tripConfig.title=document.getElementById('v15-trip-title').value.trim()||'旅行手帳';tripConfig.headerTitle=tripConfig.title;tripConfig.country=document.getElementById('v15-trip-country').value.trim();tripConfig.city=document.getElementById('v15-trip-city').value.trim();tripConfig.startDate=start||tripConfig.startDate;tripConfig.endDate=end||tripConfig.endDate;tripConfig.autoImages=document.getElementById('v15-auto-images').checked;
+      const b=(document.getElementById('v15-base-currency').value.trim()||'NTD').toUpperCase(),fc=document.getElementById('v15-foreign-currency').value.trim().toUpperCase(),er=Number(document.getElementById('v15-exchange-rate').value);if(!fc||!Number.isFinite(er)||er<=0)return alert('請填寫有效的外幣與匯率');tripConfig.baseCurrency=b;tripConfig.foreignCurrency=fc;tripConfig.exchangeRate=er;currentExchangeRate=er;localStorage.setItem('tokyo-rate-v2',String(er));
       const f=document.getElementById('v15-trip-cover')?.files?.[0];if(f){try{tripConfig.cover=await putMediaDataURL(await compressReceipt(f,1200,.8),'cover',isMediaRef(tripConfig.cover)?tripConfig.cover:'')}catch(e){return alert('封面處理失敗')}}
-      saveTripConfig();persistActiveTripSnapshot();closeGlobalModal();populateWeatherCities();updateWeatherDisplay(true);updateDailyScheduleWeather(true);
+      saveTripConfig();persistActiveTripSnapshot();applyCurrencyUI();renderExpenses();calcToolExchange();closeGlobalModal();populateWeatherCities();updateWeatherDisplay(true);updateDailyScheduleWeather(true);
     }
 
     function openHeaderIconSettings(){
@@ -2917,7 +3272,7 @@
     function confirmBatchImport(mode){const good=batchImportRows.filter(x=>x.date&&x.time&&x.title);if(!good.length)return alert('沒有可匯入資料');if(mode==='replace'&&!confirm('確定以匯入內容取代目前所有行程？'))return;let newDays=mode==='replace'?[]:daysData;for(const r of good){const md=r.date.slice(5).replace('-','/');let day=newDays.find(d=>d.date===md);if(!day){day=isoMeta(r.date,newDays.length);newDays.push(day)}day.items.push({id:'item-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),time:r.time,title:r.title,type:'',tagClass:'',group:'',address:r.address||r.title,city:r.city||tripConfig.city,note:r.note,intro:r.intro,website:r.website,reservationUrl:r.reservationUrl,wiki:r.title,image:''})}newDays.sort((a,b)=>mdToIso(a.date).localeCompare(mdToIso(b.date)));newDays.forEach((d,i)=>{d.day=`Day ${i+1}`;d.w=['日','一','二','三','四','五','六'][new Date(mdToIso(d.date)+'T12:00:00').getDay()];d.items.sort((a,b)=>String(a.time).localeCompare(String(b.time)))});daysData=newDays;saveDays();const dates=good.map(x=>x.date).sort();tripConfig.startDate=dates[0];tripConfig.endDate=dates[dates.length-1];saveTripConfig();persistActiveTripSnapshot();currentDayIndex=0;currentGroup='';renderDatePicker();renderTimeline(0);closeGlobalModal();populateWeatherCities();updateDailyScheduleWeather(true);alert(`已匯入 ${good.length} 筆行程。Google Maps、城市天氣與景點圖片會依資料自動產生。`)}
     function downloadBatchSample(){const csv='\ufeff日期,時間,行程名稱,地址,城市,簡介,備註,網址,預約網址\r\n';downloadBlob(new Blob([csv],{type:'text/csv;charset=utf-8'}),'TripBook_行程批次匯入空白Sample.csv')}
 
-    window.addEventListener('beforeunload',()=>{try{persistActiveTripSnapshot()}catch(e){}});
+    window.addEventListener('beforeunload',()=>{if(tripTransitioning)return;try{persistActiveTripSnapshot()}catch(e){}});
 
     async function resetPhoneContent(){
       const t=activeTripMeta();
@@ -2927,7 +3282,7 @@
       if(t?.useTokyoSeed!==false){
         t.snapshot=null;
       }else{
-        const cfg={...defaultTripConfig,title:t.title||'我的旅行',headerTitle:t.title||'我的旅行',emoji:'✈️',country:t.country||'',city:t.city||'',startDate:t.startDate,endDate:t.endDate,cover:t.cover||'./cover.jpg',showManual:false,manualUrl:'',showMap:true,mapUrl:'',showCoupons:false,autoImages:true};
+        const cfg={...defaultTripConfig,title:t.title||'我的旅行',headerTitle:t.title||'我的旅行',emoji:'✈️',country:t.country||'',city:t.city||'',startDate:t.startDate,endDate:t.endDate,cover:t.cover||'./cover.jpg',showManual:false,manualUrl:'',showMap:true,mapUrl:'',showCoupons:false,autoImages:true,baseCurrency:t.baseCurrency||tripConfig.baseCurrency||'NTD',foreignCurrency:t.foreignCurrency||tripConfig.foreignCurrency||'JPY',exchangeRate:Number(t.exchangeRate||currentExchangeRate||tripConfig.exchangeRate)||0.22};
         t.snapshot=createBlankTripSnapshot(cfg);
         restoreTripSnapshot(t);
       }
