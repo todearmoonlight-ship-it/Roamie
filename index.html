@@ -816,13 +816,8 @@
     </div>
     <div class="flex items-center gap-1.5">
       <span class="text-gray-400">•</span>
-      <span>累計使用：</span>
-      <span id="myroamie-user-count" class="font-bold text-skyBlue">讀取中…</span>
-    </div>
-    <div class="flex items-center gap-1.5">
-      <span class="text-gray-400">•</span>
       <span>最後更新：</span>
-      <span class="font-bold text-gray-700">2026/9/19</span>
+      <span class="font-bold text-gray-700">2026/9/18</span>
     </div>
     <div class="flex items-center gap-1.5">
       <span class="text-gray-400">•</span>
@@ -1068,7 +1063,7 @@
     // ===== V15.1 通用旅程：保留原版 UI =====
     const V15_CONFIG_KEY='tripbook-v15-config';
     const TRIP_MANAGER_KEY='tripbook-v15-trip-manager';
-    const TRIP_DATA_KEYS=['tokyo-days-v2','tokyo-expenses-v2','tokyo-expense-split-members-v1','tokyo-rate-v2','tokyo-budget-v2','tokyo-shop-v2','tokyo-journals-v2','tokyo-plan-v2','tripbook-v15-bookings',V15_CONFIG_KEY,'tripbook-v15-coupons'];
+    const TRIP_DATA_KEYS=['tokyo-days-v2','tokyo-expenses-v2','tokyo-expense-split-members-v1','tokyo-expense-split-self-seeded-v1','tokyo-rate-v2','tokyo-budget-v2','tokyo-shop-v2','tokyo-journals-v2','tokyo-plan-v2','tripbook-v15-bookings',V15_CONFIG_KEY,'tripbook-v15-coupons'];
     const defaultTripConfig={
       title:'東京自由行 2026',headerTitle:'東京手帳 2026',emoji:'🍁',country:'日本',city:'東京',
       startDate:'2026-10-01',endDate:'2026-10-08',cover:'./cover.jpg',
@@ -1137,7 +1132,6 @@
       return out;
     }
     function blankShopData(){return {'藥品':[],'伴手禮':[],'美食':[],'超商':[],'其他':[],'購物清單':[]}}
-    function defaultSplitMembers(){return [{id:'self',name:'自己'}]}
 
     // 每趟旅程都從同一套「基本準備清單」開始；之後各旅程可自行增減，彼此不互相影響。
     const BASE_PLAN_DATA={
@@ -1158,7 +1152,8 @@
       return {
         'tokyo-days-v2':JSON.stringify(tripDates(cfg.startDate,cfg.endDate)),
         'tokyo-expenses-v2':'[]',
-        'tokyo-expense-split-members-v1':JSON.stringify(defaultSplitMembers()),
+        'tokyo-expense-split-members-v1':JSON.stringify([{id:'person-self',name:'自己'}]),
+        'tokyo-expense-split-self-seeded-v1':'1',
         'tokyo-rate-v2':String(Number(cfg.exchangeRate)||0.22),
         'tokyo-budget-v2':'80000',
         'tokyo-shop-v2':JSON.stringify(blankShopData()),
@@ -1634,15 +1629,22 @@
     let currentCategoryFilter='全部';
     let expenseViewMode='list';
     const EXPENSE_SPLIT_MEMBERS_KEY='tokyo-expense-split-members-v1';
+    const EXPENSE_SPLIT_SELF_SEEDED_KEY='tokyo-expense-split-self-seeded-v1';
+    const DEFAULT_SPLIT_SELF_MEMBER={id:'person-self',name:'自己'};
     let splitMembers=(()=>{try{const x=JSON.parse(localStorage.getItem(EXPENSE_SPLIT_MEMBERS_KEY)||'[]');return Array.isArray(x)?x.filter(m=>m&&m.id&&m.name):[]}catch(e){return[]}})();
     function saveSplitMembers(){localStorage.setItem(EXPENSE_SPLIT_MEMBERS_KEY,JSON.stringify(splitMembers));}
-    function ensureDefaultSplitMember(){
-      if(splitMembers.some(m=>String(m.name||'').trim()==='自己'))return;
-      const id=splitMembers.some(m=>String(m.id)==='self')?`self-${Date.now()}`:'self';
-      splitMembers.unshift({id,name:'自己'});
-      saveSplitMembers();
-    }
-    ensureDefaultSplitMember();
+
+    // 每一趟旅程的分帳名單第一次使用時，預先建立「自己」。
+    // 只初始化一次；之後仍可由使用者自行新增或刪除，不會在每次開啟 APP 時強制加回。
+    (function ensureDefaultSelfSplitMember(){
+      if(localStorage.getItem(EXPENSE_SPLIT_SELF_SEEDED_KEY)==='1')return;
+      if(!splitMembers.some(m=>String(m.name||'').trim()==='自己')){
+        splitMembers.unshift({...DEFAULT_SPLIT_SELF_MEMBER});
+        saveSplitMembers();
+      }
+      localStorage.setItem(EXPENSE_SPLIT_SELF_SEEDED_KEY,'1');
+      try{persistActiveTripSnapshot();}catch(e){}
+    })();
     function splitIdsForExpense(item){
       const valid=new Set(splitMembers.map(m=>String(m.id)));
       return (Array.isArray(item?.splitWith)?item.splitWith:[]).map(String).filter(id=>valid.has(id));
@@ -3132,7 +3134,7 @@
     function blobToDataURL(blob){return new Promise((resolve,reject)=>{const r=new FileReader();r.onload=()=>resolve(r.result);r.onerror=()=>reject(r.error);r.readAsDataURL(blob)})}
     function dataURLToBlob(dataURL){const [meta,data]=String(dataURL).split(',');const mime=(meta.match(/data:([^;]+)/)||[])[1]||'application/octet-stream';const bin=atob(data||'');const bytes=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)bytes[i]=bin.charCodeAt(i);return new Blob([bytes],{type:mime})}
     async function clearBookingCredentialStore(){try{const db=await openBookingPdfDB();await new Promise((resolve,reject)=>{const tx=db.transaction(BOOKING_PDF_STORE,'readwrite');tx.objectStore(BOOKING_PDF_STORE).clear();tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error)})}catch(e){}}
-    const APP_EXACT_KEYS=['tokyo-days-v2','tokyo-expenses-v2','tokyo-expense-split-members-v1','tokyo-rate-v2','tokyo-budget-v2','tokyo-shop-v2','tokyo-journals-v2','tokyo-plan-v2'];
+    const APP_EXACT_KEYS=['tokyo-days-v2','tokyo-expenses-v2','tokyo-expense-split-members-v1','tokyo-expense-split-self-seeded-v1','tokyo-rate-v2','tokyo-budget-v2','tokyo-shop-v2','tokyo-journals-v2','tokyo-plan-v2'];
     function isTokyoAppKey(k){return APP_EXACT_KEYS.includes(k)||k.startsWith('note-')||k.startsWith('tokyo-weather-');}
     function collectAppLocalStorage(){
       const out={};
@@ -3337,51 +3339,6 @@
     function mdToIso(md){const y=(tripConfig.startDate||'2026').slice(0,4),[m,d]=md.split('/');return `${y}-${String(m).padStart(2,'0')}-${String(d).padStart(2,'0')}`}
     function confirmBatchImport(mode){const good=batchImportRows.filter(x=>x.date&&x.time&&x.title);if(!good.length)return alert('沒有可匯入資料');if(mode==='replace'&&!confirm('確定以匯入內容取代目前所有行程？'))return;let newDays=mode==='replace'?[]:daysData;for(const r of good){const md=r.date.slice(5).replace('-','/');let day=newDays.find(d=>d.date===md);if(!day){day=isoMeta(r.date,newDays.length);newDays.push(day)}day.items.push({id:'item-'+Date.now()+'-'+Math.random().toString(36).slice(2,6),time:r.time,title:r.title,type:'',tagClass:'',group:'',address:r.address||r.title,city:r.city||tripConfig.city,note:r.note,intro:r.intro,website:r.website,reservationUrl:r.reservationUrl,wiki:r.title,image:''})}newDays.sort((a,b)=>mdToIso(a.date).localeCompare(mdToIso(b.date)));newDays.forEach((d,i)=>{d.day=`Day ${i+1}`;d.w=['日','一','二','三','四','五','六'][new Date(mdToIso(d.date)+'T12:00:00').getDay()];d.items.sort((a,b)=>String(a.time).localeCompare(String(b.time)))});daysData=newDays;saveDays();const dates=good.map(x=>x.date).sort();tripConfig.startDate=dates[0];tripConfig.endDate=dates[dates.length-1];saveTripConfig();persistActiveTripSnapshot();currentDayIndex=0;currentGroup='';renderDatePicker();renderTimeline(0);closeGlobalModal();populateWeatherCities();updateDailyScheduleWeather(true);alert(`已匯入 ${good.length} 筆行程。Google Maps、城市天氣與景點圖片會依資料自動產生。`)}
     function downloadBatchSample(){const csv='\ufeff日期,時間,行程名稱,地址,城市,簡介,備註,網址,預約網址\r\n';downloadBlob(new Blob([csv],{type:'text/csv;charset=utf-8'}),'TripBook_行程批次匯入空白Sample.csv')}
-
-    // ===== MyRoamie 累計使用人數（輕量匿名計數） =====
-    // 每個瀏覽器／裝置第一次成功連線時 +1；之後只讀取總數，且最多每 6 小時更新一次。
-    // 計數器只保存一個整數，不會上傳行程、記帳、憑證或其他 APP 內容。
-    const MYROAMIE_COUNTER_CONFIG={
-      base:'https://api.countapi.xyz',
-      namespace:'myroamie-moonlight-liu',
-      key:'unique-users-v1',
-      countedKey:'myroamie-unique-user-counted-v1',
-      cacheKey:'myroamie-global-user-count-cache-v1',
-      cacheAtKey:'myroamie-global-user-count-cache-at-v1',
-      refreshMs:6*60*60*1000
-    };
-    async function updateMyRoamieUserCount(force=false){
-      const el=document.getElementById('myroamie-user-count');
-      if(!el)return;
-      const c=MYROAMIE_COUNTER_CONFIG;
-      const cached=Number(localStorage.getItem(c.cacheKey));
-      const hasCached=Number.isFinite(cached)&&cached>=0;
-      if(hasCached)el.textContent=`${cached.toLocaleString()} 人`;
-      const counted=localStorage.getItem(c.countedKey)==='1';
-      const last=Number(localStorage.getItem(c.cacheAtKey))||0;
-      if(counted&&!force&&hasCached&&Date.now()-last<c.refreshMs)return;
-      const op=counted?'get':'hit';
-      const url=`${c.base}/${op}/${encodeURIComponent(c.namespace)}/${encodeURIComponent(c.key)}`;
-      const ctrl=new AbortController();
-      const timer=setTimeout(()=>ctrl.abort(),4500);
-      try{
-        const res=await fetch(url,{method:'GET',cache:'no-store',signal:ctrl.signal});
-        if(!res.ok)throw new Error(`counter HTTP ${res.status}`);
-        const data=await res.json();
-        const value=Number(data?.value);
-        if(!Number.isFinite(value)||value<0)throw new Error('invalid counter value');
-        el.textContent=`${value.toLocaleString()} 人`;
-        localStorage.setItem(c.cacheKey,String(value));
-        localStorage.setItem(c.cacheAtKey,String(Date.now()));
-        if(!counted)localStorage.setItem(c.countedKey,'1');
-      }catch(e){
-        if(!hasCached)el.textContent='暫無資料';
-        console.warn('MyRoamie counter unavailable:',e);
-      }finally{
-        clearTimeout(timer);
-      }
-    }
-    window.addEventListener('load',()=>setTimeout(()=>updateMyRoamieUserCount(false),700));
 
     window.addEventListener('beforeunload',()=>{if(tripTransitioning)return;try{persistActiveTripSnapshot()}catch(e){}});
 
