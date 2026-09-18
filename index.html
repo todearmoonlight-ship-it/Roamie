@@ -390,17 +390,23 @@
       <div id="bookings-list" class="space-y-4">
 
         <div class="bg-card rounded-2xl p-4 shadow-soft border border-sand">
-          <div class="flex items-center justify-between gap-3">
-            <div>
+          <button id="booking-pdf-toggle" type="button" onclick="toggleBookingVoucherPanel()" class="w-full flex items-center justify-between gap-3 text-left btn-press" aria-expanded="false">
+            <div class="min-w-0">
               <div class="text-xs font-bold text-wood"><i class="fa-solid fa-folder-open text-torii mr-1"></i>旅遊憑證（PDF／圖片）</div>
-              <div class="text-[9px] text-gray-400 mt-1">可將資料儲存在此裝置，不會上傳雲端(保護個資)，可離線觀看。</div>
+              <div class="text-[9px] text-gray-400 mt-1"><span id="booking-pdf-count">讀取中…</span>・點擊展開／收起</div>
             </div>
-            <label class="px-3 py-2 rounded-xl bg-sakuraLight text-torii text-[10px] font-bold btn-press cursor-pointer whitespace-nowrap">
-              <i class="fa-solid fa-upload mr-1"></i>上傳憑證
-              <input id="booking-pdf-input" type="file" accept="application/pdf,.pdf,image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif" multiple class="hidden">
-            </label>
+            <i id="booking-pdf-chevron" class="fa-solid fa-chevron-down text-gray-400 shrink-0 transition-transform duration-200"></i>
+          </button>
+          <div id="booking-pdf-panel" class="hidden pt-3 mt-3 border-t border-dashed border-sand space-y-3">
+            <div class="flex items-center justify-between gap-3">
+              <div class="text-[9px] text-gray-400 leading-relaxed">可將資料儲存在此裝置，不會上傳雲端(保護個資)，可離線觀看。</div>
+              <label class="px-3 py-2 rounded-xl bg-sakuraLight text-torii text-[10px] font-bold btn-press cursor-pointer whitespace-nowrap shrink-0">
+                <i class="fa-solid fa-upload mr-1"></i>上傳憑證
+                <input id="booking-pdf-input" type="file" accept="application/pdf,.pdf,image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif" multiple class="hidden">
+              </label>
+            </div>
+            <div id="booking-pdf-list" class="space-y-2"></div>
           </div>
-          <div id="booking-pdf-list" class="space-y-2 mt-3"></div>
         </div>
 
         <!-- 去程航班 -->
@@ -1126,7 +1132,21 @@
       return out;
     }
     function blankShopData(){return {'藥品':[],'伴手禮':[],'美食':[],'超商':[],'其他':[],'購物清單':[]}}
-    function blankPlanData(){return {'必備':[{text:'有效護照',checked:false},{text:'信用卡與現金',checked:false},{text:'網路設備',checked:false}],'衣物':[{text:'外衣外褲',checked:false},{text:'內衣襪子',checked:false}],'隨身用品':[{text:'雨具',checked:false},{text:'保溫瓶',checked:false}],'3C設備':[{text:'手機及充電器',checked:false},{text:'行動電源',checked:false}],'待辦事項':[{text:'確認護照效期',checked:false}],'其他':[]}}
+
+    // 每趟旅程都從同一套「基本準備清單」開始；之後各旅程可自行增減，彼此不互相影響。
+    const BASE_PLAN_DATA={
+      '必備':['有效護照(6個月)','展場入場證','現金與信用卡','網路設備 (SIM卡/WiFi機)','駕照正本及譯本(自駕用)'],
+      '衣物':['外衣外褲','內衣內褲','正式服裝','帽子','圍巾','手套','外套','睡衣褲','鞋襪','墨鏡'],
+      '隨身用品':['個人常備藥品','個人保養梳妝用品','衛生紙/濕紙巾','口罩','環保袋/小垃圾袋','雨具','保溫瓶','旅行枕','野餐墊','髮箍/髮夾','兒童餐具'],
+      '3C設備':['手機及充電器','耳機','相機','行動電源','筆電','充電線/延長線','運動攝影機','Airtag'],
+      '待辦事項':['Visit Japan Web(搭機前)','重要APP事先下載','重要文件電子備份'],
+      '其他':['旅行鍋','水果刀','夾鏈袋/保鮮盒','暖暖包','便攜式口袋折疊椅','小被被']
+    };
+    function blankPlanData(){
+      return Object.fromEntries(Object.entries(BASE_PLAN_DATA).map(([cat,items])=>[
+        cat,items.map(text=>({text,checked:false}))
+      ]));
+    }
 
     function createBlankTripSnapshot(cfg){
       return {
@@ -1525,7 +1545,17 @@
     // ---------------- 航程住宿：新旅程自行建立，不沿用東京預設 ----------------
     let bookingItems=(()=>{try{return JSON.parse(localStorage.getItem('tripbook-v15-bookings')||'[]')}catch(e){return[]}})();
     function saveBookingItems(){localStorage.setItem('tripbook-v15-bookings',JSON.stringify(bookingItems));persistActiveTripSnapshot();}
-    function bookingVoucherCard(){return `<div class="bg-card rounded-2xl p-4 shadow-soft border border-sand"><div class="flex items-center justify-between gap-3"><div><div class="text-xs font-bold text-wood"><i class="fa-solid fa-folder-open text-torii mr-1"></i>旅遊憑證（PDF／圖片）</div><div class="text-[9px] text-gray-400 mt-1">可將機票、住宿、門票等 PDF 或圖片憑證儲存在此裝置。</div></div><label class="px-3 py-2 rounded-xl bg-sakuraLight text-torii text-[10px] font-bold btn-press cursor-pointer whitespace-nowrap"><i class="fa-solid fa-upload mr-1"></i>上傳憑證<input id="booking-pdf-input" type="file" accept="application/pdf,.pdf,image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif" multiple class="hidden"></label></div><div id="booking-pdf-list" class="space-y-2 mt-3"></div></div>`;}
+    function toggleBookingVoucherPanel(force){
+      const panel=document.getElementById('booking-pdf-panel');
+      if(!panel)return;
+      const expand=typeof force==='boolean'?force:panel.classList.contains('hidden');
+      panel.classList.toggle('hidden',!expand);
+      const btn=document.getElementById('booking-pdf-toggle');
+      if(btn)btn.setAttribute('aria-expanded',String(expand));
+      const chevron=document.getElementById('booking-pdf-chevron');
+      if(chevron)chevron.style.transform=expand?'rotate(180deg)':'rotate(0deg)';
+    }
+    function bookingVoucherCard(){return `<div class="bg-card rounded-2xl p-4 shadow-soft border border-sand"><button id="booking-pdf-toggle" type="button" onclick="toggleBookingVoucherPanel()" class="w-full flex items-center justify-between gap-3 text-left btn-press" aria-expanded="false"><div class="min-w-0"><div class="text-xs font-bold text-wood"><i class="fa-solid fa-folder-open text-torii mr-1"></i>旅遊憑證（PDF／圖片）</div><div class="text-[9px] text-gray-400 mt-1"><span id="booking-pdf-count">讀取中…</span>・點擊展開／收起</div></div><i id="booking-pdf-chevron" class="fa-solid fa-chevron-down text-gray-400 shrink-0 transition-transform duration-200"></i></button><div id="booking-pdf-panel" class="hidden pt-3 mt-3 border-t border-dashed border-sand space-y-3"><div class="flex items-center justify-between gap-3"><div class="text-[9px] text-gray-400 leading-relaxed">可將機票、住宿、門票等 PDF 或圖片憑證儲存在此裝置，不會上傳雲端，可離線觀看。</div><label class="px-3 py-2 rounded-xl bg-sakuraLight text-torii text-[10px] font-bold btn-press cursor-pointer whitespace-nowrap shrink-0"><i class="fa-solid fa-upload mr-1"></i>上傳憑證<input id="booking-pdf-input" type="file" accept="application/pdf,.pdf,image/*,.jpg,.jpeg,.png,.webp,.gif,.heic,.heif" multiple class="hidden"></label></div><div id="booking-pdf-list" class="space-y-2"></div></div></div>`;}
     function formatBookingDate(date){
       if(!date)return '';
       const d=new Date(date+'T12:00:00');if(Number.isNaN(d.getTime()))return escapeHtml(date);
@@ -2375,14 +2405,7 @@
 
     // ---------------- 準備頁籤 ----------------
     let activePlanCategory = '必備';
-    const defaultPlanData={
-      '必備':['有效護照(6個月)','展場入場證','現金與信用卡','網路設備 (SIM卡/WiFi機)','駕照正本及譯本(自駕用)'],
-      '衣物':['外衣外褲','內衣內褲','正式服裝','帽子','圍巾','手套','外套','睡衣褲','鞋襪','墨鏡'],
-      '隨身用品':['個人常備藥品','個人保養梳妝用品','衛生紙/濕紙巾','口罩','環保袋/小垃圾袋','雨具','保溫瓶','旅行枕','野餐墊','髮箍/髮夾','兒童餐具'],
-      '3C設備':['手機及充電器','耳機','相機','行動電源','筆電','充電線/延長線','運動攝影機','Airtag'],
-      '待辦事項':['Visit Japan Web(搭機前)','重要APP事先下載','重要文件電子備份'],
-      '其他':['旅行鍋','水果刀','夾鏈袋/保鮮盒','暖暖包','便攜式口袋折疊椅','小被被']
-    };
+    const defaultPlanData=BASE_PLAN_DATA;
     function normalizePlanData(raw){
       const out={};
       Object.keys(defaultPlanData).forEach(cat=>{
@@ -2678,8 +2701,10 @@
     async function renderBookingPdfs(){
       const box=document.getElementById('booking-pdf-list');
       if(!box)return;
+      const countEl=document.getElementById('booking-pdf-count');
       try{
         const items=await getBookingPdfs();
+        if(countEl)countEl.textContent=items.length?`已上傳 ${items.length} 份`:'尚未上傳';
         if(!items.length){
           box.innerHTML='<div class="text-[9px] text-gray-400 text-center py-2">尚未上傳旅遊憑證</div>';
           return;
@@ -2698,6 +2723,7 @@
           </div>`;
         }).join('');
       }catch(e){
+        if(countEl)countEl.textContent='讀取失敗';
         box.innerHTML='<div class="text-[9px] text-red-400 text-center py-2">旅遊憑證讀取失敗</div>';
       }
     }
